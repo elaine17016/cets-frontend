@@ -33,7 +33,7 @@ const FullscreenLoader = () => (
   </div>
 );
 
-const ProtectedRoute = ({ children, allowRoles }) => {
+export const ProtectedRoute = ({ children, allowRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {

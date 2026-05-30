@@ -1,0 +1,71 @@
+import React from 'react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import EventsList from '../EventsList';
+
+const getEventsMock = vi.fn();
+const getEventMock = vi.fn();
+const startOIDCLoginMock = vi.fn();
+
+vi.mock('../../api/client', () => ({
+  apiClient: {
+    getEvents: (...args) => getEventsMock(...args),
+    getEvent: (...args) => getEventMock(...args)
+  }
+}));
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { role: 'EMPLOYEE', id: 'u1' },
+    loading: false,
+    startOIDCLogin: startOIDCLoginMock
+  })
+}));
+
+describe('EventsList page', () => {
+  beforeEach(() => {
+    getEventsMock.mockReset();
+    getEventMock.mockReset();
+    getEventsMock.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'evt-1',
+          title: '春季家庭日',
+          status: 'PUBLISHED',
+          is_registration_open: true,
+          is_eligible: true,
+          session_count: 1
+        }],
+        has_next: false
+      }
+    });
+    getEventMock.mockResolvedValue({
+      data: {
+        id: 'evt-1',
+        sessions: [{
+          id: 'sess-1',
+          venue: '新竹廣場',
+          registration_opens_at: '2026-05-01T00:00:00+08:00',
+          registration_closes_at: '2026-12-31T23:59:59+08:00',
+          status: 'REGISTRATION_OPEN',
+          ticket_types: [{ quota: 100 }]
+        }]
+      }
+    });
+  });
+
+  it('renders loaded events for authenticated employees', async () => {
+    render(
+      <MemoryRouter>
+        <EventsList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('活動目錄')).toBeInTheDocument();
+    });
+    expect(await screen.findByText('春季家庭日')).toBeInTheDocument();
+    expect(getEventsMock).toHaveBeenCalled();
+  });
+});

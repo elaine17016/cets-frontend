@@ -16,7 +16,8 @@ module.exports = defineConfig({
       exclude: [
         'src/**/*.test.{js,jsx}',
         'src/**/__tests__/**',
-        'src/main.jsx'
+        'src/main.jsx',
+        'src/test/**'
       ]
     }
   }

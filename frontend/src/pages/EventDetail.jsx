@@ -31,17 +31,17 @@ const REGISTRATION_ALLOWED_ROLES = new Set(['EMPLOYEE']);
 const RE_REGISTER_ELIGIBLE_STATUSES = new Set(['CANCELLED', 'FORFEITED']);
 const NON_OCCUPYING_REGISTRATION_STATUSES = new Set(['CANCELLED', 'FORFEITED']);
 
-const registrationErrMsg = (e) =>
+export const registrationErrMsg = (e) =>
   e?.error?.message || (typeof e?.detail === 'string' ? e.detail : '') || '';
 
-const isAlreadyRegisteredError = (e) =>
+export const isAlreadyRegisteredError = (e) =>
   e?.error?.code === 'ALREADY_REGISTERED' ||
   /已報名此場次|already registered|ALREADY_REGISTERED/i.test(registrationErrMsg(e));
 
 const CETS_ELIGIBILITY_MARKER_PREFIX = '<!--CETS_ELIGIBILITY:';
 const CETS_ELIGIBILITY_MARKER_SUFFIX = '-->';
 
-const getTicketAudienceLabel = (ticketType) => {
+export const getTicketAudienceLabel = (ticketType) => {
   const audience = String(ticketType?.audience || '').toUpperCase();
   const name = String(ticketType?.name || '');
   if (audience === 'DEPENDENT' || /兒童|孩童|小孩|child/i.test(name)) return '兒童';
@@ -49,14 +49,14 @@ const getTicketAudienceLabel = (ticketType) => {
   return '票種';
 };
 
-const getDefaultTicketType = (ticketTypes = []) => (
+export const getDefaultTicketType = (ticketTypes = []) => (
   ticketTypes.find((tt) => getTicketAudienceLabel(tt) === '成人') ||
   ticketTypes[0] ||
   null
 );
 
 /** Strip legacy hidden eligibility marker so old event descriptions stay readable. */
-const stripEligibilityMarkerFromDescription = (rawDescription) => {
+export const stripEligibilityMarkerFromDescription = (rawDescription) => {
   const description = String(rawDescription || '');
   const start = description.indexOf(CETS_ELIGIBILITY_MARKER_PREFIX);
   if (start < 0) return description.trim();
@@ -76,7 +76,7 @@ const registrationDialogInitialState = {
   eligibilityConfirmed: false
 };
 
-const registrationDialogReducer = (state, action) => {
+export const registrationDialogReducer = (state, action) => {
   switch (action.type) {
     case 'open': {
       const ticketTypes = Array.isArray(action.ticketTypes) ? action.ticketTypes : [];
@@ -115,7 +115,7 @@ const eventDetailPageInitialState = {
   error: ''
 };
 
-const eventDetailPageReducer = (state, patch) => ({ ...state, ...patch });
+export const eventDetailPageReducer = (state, patch) => ({ ...state, ...patch });
 
 const EventSessionActions = ({
   session,

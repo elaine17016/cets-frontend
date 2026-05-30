@@ -55,19 +55,19 @@ const getEventSearchText = (event) => (
     .toLowerCase()
 );
 
-const isDateInRange = (date, rangeStart, rangeEnd) => (
+export const isDateInRange = (date, rangeStart, rangeEnd) => (
   (date.isAfter(rangeStart) || date.isSame(rangeStart))
   && (date.isBefore(rangeEnd) || date.isSame(rangeEnd))
 );
 
-const resolveDateWindow = (dateWindow) => {
+export const resolveDateWindow = (dateWindow) => {
   if (dateWindow === 'week') return [dayjs().startOf('day'), dayjs().add(7, 'day').endOf('day')];
   if (dateWindow === 'month') return [dayjs().startOf('day'), dayjs().add(1, 'month').endOf('day')];
   if (dateWindow === 'quarter') return [dayjs().startOf('day'), dayjs().add(3, 'month').endOf('day')];
   return null;
 };
 
-const isEventWithinDateWindow = (event, dateWindow) => {
+export const isEventWithinDateWindow = (event, dateWindow) => {
   const range = resolveDateWindow(dateWindow);
   if (!range) return true;
   const [rangeStart, rangeEnd] = range;
@@ -79,6 +79,58 @@ const isEventWithinDateWindow = (event, dateWindow) => {
     || isDateInRange(resolvedEnd, rangeStart, rangeEnd)
     || (eventStart.isBefore(rangeStart) && resolvedEnd.isAfter(rangeEnd));
 };
+
+export const canRegisterEventForRole = (event, role) => {
+  const roleCanRegister = role === 'EMPLOYEE';
+  const isPublished = event.status === 'PUBLISHED';
+  const isRegistrationOpen = Boolean(event.is_registration_open);
+  return roleCanRegister && isPublished && isRegistrationOpen && Boolean(event.is_eligible);
+};
+
+export const getPrimaryEventStatus = (event, role) => {
+  const isPublished = event.status === 'PUBLISHED';
+  const isRegistrationOpen = Boolean(event.is_registration_open);
+  if (event.status === 'CANCELLED') return { label: '已取消', color: 'red' };
+  if (!isPublished) return { label: '活動未發布', color: 'default' };
+  if (role !== 'EMPLOYEE') return { label: '此身分不可報名', color: 'warning' };
+  if (!isRegistrationOpen) return { label: '已截止/未開放', color: 'default' };
+  if (!event.is_eligible) return { label: '不符合資格', color: 'default' };
+  return { label: '可報名', color: 'success' };
+};
+
+export const getEventStatusFilterValue = (event, role) => {
+  if (event.status === 'CANCELLED') return 'cancelled';
+  if (!event.is_eligible) return 'ineligible';
+  if (canRegisterEventForRole(event, role)) return 'open';
+  return 'closed';
+};
+
+export const filterVisibleEvents = (events, filters, role) => {
+  const term = filters.keyword.trim().toLowerCase();
+  return events.filter((event) => {
+    if (term && !getEventSearchText(event).includes(term)) return false;
+    if (!isEventWithinDateWindow(event, filters.dateWindow)) return false;
+    if (filters.statusFilter !== ALL_FILTER_VALUE && getEventStatusFilterValue(event, role) !== filters.statusFilter) {
+      return false;
+    }
+    return true;
+  });
+};
+
+export const sortVisibleEvents = (events, role) => events.slice().sort((a, b) => {
+  const aCanRegister = canRegisterEventForRole(a, role);
+  const bCanRegister = canRegisterEventForRole(b, role);
+  if (aCanRegister !== bCanRegister) {
+    return bCanRegister - aCanRegister;
+  }
+  const aCreated = dayjs(a.created_at || a.createdAt || 0).valueOf();
+  const bCreated = dayjs(b.created_at || b.createdAt || 0).valueOf();
+  if (aCreated !== bCreated) return bCreated - aCreated;
+  const aUpdated = dayjs(a.updated_at || a.updatedAt || 0).valueOf();
+  const bUpdated = dayjs(b.updated_at || b.updatedAt || 0).valueOf();
+  if (aUpdated !== bUpdated) return bUpdated - aUpdated;
+  return String(a.id || '').localeCompare(String(b.id || ''));
+});
 
 const EventCard = ({ event, primaryStatus, onOpen }) => {
   const startDate = dayjs(event.starts_at);
@@ -254,55 +306,24 @@ const EventsList = () => {
     fetchEvents();
   }, [fetchEvents, user]);
 
-  const canRegisterEvent = useCallback((event) => {
-    const roleCanRegister = user?.role === 'EMPLOYEE';
-    const isPublished = event.status === 'PUBLISHED';
-    const isRegistrationOpen = Boolean(event.is_registration_open);
-    return roleCanRegister && isPublished && isRegistrationOpen && Boolean(event.is_eligible);
-  }, [user?.role]);
+  const canRegisterEvent = useCallback((event) => canRegisterEventForRole(event, user?.role), [user?.role]);
 
-  const getPrimaryStatus = useCallback((event) => {
-    const isPublished = event.status === 'PUBLISHED';
-    const isRegistrationOpen = Boolean(event.is_registration_open);
-    if (event.status === 'CANCELLED') return { label: '已取消', color: 'red' };
-    if (!isPublished) return { label: '活動未發布', color: 'default' };
-    if (user?.role !== 'EMPLOYEE') return { label: '此身分不可報名', color: 'warning' };
-    if (!isRegistrationOpen) return { label: '已截止/未開放', color: 'default' };
-    if (!event.is_eligible) return { label: '不符合資格', color: 'default' };
-    return { label: '可報名', color: 'success' };
-  }, [user?.role]);
+  const getPrimaryStatus = useCallback((event) => getPrimaryEventStatus(event, user?.role), [user?.role]);
 
-  const getStatusFilterValue = useCallback((event) => {
-    if (event.status === 'CANCELLED') return 'cancelled';
-    if (!event.is_eligible) return 'ineligible';
-    if (canRegisterEvent(event)) return 'open';
-    return 'closed';
-  }, [canRegisterEvent]);
+  const getStatusFilterValue = useCallback(
+    (event) => getEventStatusFilterValue(event, user?.role),
+    [user?.role]
+  );
 
-  const visibleEvents = useMemo(() => {
-    const term = keyword.trim().toLowerCase();
-    return events.filter((event) => {
-      if (term && !getEventSearchText(event).includes(term)) return false;
-      if (!isEventWithinDateWindow(event, dateWindow)) return false;
-      if (statusFilter !== ALL_FILTER_VALUE && getStatusFilterValue(event) !== statusFilter) return false;
-      return true;
-    });
-  }, [dateWindow, events, getStatusFilterValue, keyword, statusFilter]);
+  const visibleEvents = useMemo(
+    () => filterVisibleEvents(events, filters, user?.role),
+    [events, filters, user?.role]
+  );
 
-  const sortedVisibleEvents = useMemo(() => visibleEvents.slice().sort((a, b) => {
-    const aCanRegister = canRegisterEvent(a);
-    const bCanRegister = canRegisterEvent(b);
-    if (aCanRegister !== bCanRegister) {
-      return bCanRegister - aCanRegister;
-    }
-    const aCreated = dayjs(a.created_at || a.createdAt || 0).valueOf();
-    const bCreated = dayjs(b.created_at || b.createdAt || 0).valueOf();
-    if (aCreated !== bCreated) return bCreated - aCreated;
-    const aUpdated = dayjs(a.updated_at || a.updatedAt || 0).valueOf();
-    const bUpdated = dayjs(b.updated_at || b.updatedAt || 0).valueOf();
-    if (aUpdated !== bUpdated) return bUpdated - aUpdated;
-    return String(b.id || '').localeCompare(String(a.id || ''));
-  }), [canRegisterEvent, visibleEvents]);
+  const sortedVisibleEvents = useMemo(
+    () => sortVisibleEvents(visibleEvents, user?.role),
+    [user?.role, visibleEvents]
+  );
 
   const eligibleCount = useMemo(
     () => events.filter((event) => canRegisterEvent(event)).length,
