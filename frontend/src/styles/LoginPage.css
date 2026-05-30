@@ -1,0 +1,24 @@
+.login-page {
+  max-width: 760px;
+}
+
+.login-page > .ant-row {
+  margin-inline: 0 !important;
+}
+
+.login-page > .ant-row > .ant-col {
+  padding-inline: 0 !important;
+}
+
+.login-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 12px;
+  border: 1px solid rgba(218, 41, 28, 0.24);
+  border-radius: var(--ds-radius-pill);
+  color: var(--ds-red);
+  background: rgba(218, 41, 28, 0.08);
+  font-size: 12px;
+  font-weight: 800;
+}

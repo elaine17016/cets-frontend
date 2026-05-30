@@ -1,0 +1,273 @@
+.admin-console-page .ant-card {
+  overflow: hidden;
+}
+
+.admin-console-page .admin-event-select {
+  width: 100%;
+}
+
+.admin-console-page .admin-console-tabs .ant-tabs-tab {
+  font-weight: 700;
+}
+
+.admin-console-page .admin-create-card .ant-card-body {
+  padding-top: 18px;
+}
+
+.admin-console-page .admin-create-form .ant-divider-inner-text {
+  color: var(--ds-text-strong);
+  font-weight: 800;
+}
+
+.admin-console-page .admin-create-actions {
+  width: 100%;
+}
+
+.admin-console-page .admin-cover-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 10px;
+  margin: -8px 0 18px;
+}
+
+.admin-console-page .admin-cover-option {
+  display: block;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.admin-console-page .admin-cover-option:hover,
+.admin-console-page .admin-cover-option:focus-visible {
+  box-shadow: 0 0 0 3px rgba(218, 41, 28, 0.12);
+  outline: none;
+}
+
+.admin-console-page .admin-cover-option.is-selected {
+  box-shadow: 0 0 0 2px var(--ds-red);
+}
+
+.admin-console-page .admin-cover-option img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--ds-radius-md);
+  object-fit: cover;
+  background: var(--ds-surface-muted);
+}
+
+.admin-console-page .admin-console-hero .ant-card-body {
+  padding: var(--ds-space-sm);
+}
+
+.admin-console-page .admin-console-hero-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-sm);
+}
+
+.admin-console-page .admin-console-kicker,
+.admin-console-page .admin-dashboard-section-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ds-red);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-console-page .admin-console-hero h3,
+.admin-console-page .admin-dashboard-picker h4 {
+  margin: 0 0 8px;
+}
+
+.admin-console-page .admin-console-hero p,
+.admin-console-page .admin-draft-header p {
+  margin-bottom: 0;
+}
+
+.admin-console-page .admin-draft-card .ant-card-body {
+  padding: 20px;
+}
+
+.admin-console-page .admin-draft-header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ds-line-soft);
+}
+
+.admin-console-page .admin-draft-header h4 {
+  margin: 0 0 8px;
+}
+
+.admin-console-page .admin-dashboard-toolbar .ant-card-body {
+  padding: 14px 16px;
+}
+
+.admin-console-page .admin-dashboard-toolbar-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+}
+
+.admin-console-page .admin-dashboard-picker,
+.admin-console-page .admin-dashboard-action-panel {
+  min-width: 0;
+}
+
+.admin-console-page .admin-dashboard-select-row {
+  width: min(100%, 560px);
+}
+
+.admin-console-page .admin-dashboard-action-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 18px;
+}
+
+.admin-console-page .admin-dashboard-action-block {
+  min-width: 0;
+}
+
+.admin-console-page .admin-dashboard-action-block .admin-dashboard-section-label {
+  margin-bottom: 8px;
+}
+
+.admin-console-page .admin-dashboard-actions {
+  gap: 8px !important;
+}
+
+.admin-console-page .admin-session-summary {
+  min-height: 40px;
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid rgba(218, 41, 28, 0.22);
+  border-radius: var(--ds-radius-pill);
+  background: rgba(218, 41, 28, 0.08);
+  color: var(--ds-text);
+  box-shadow: var(--ds-inner-highlight);
+}
+
+.admin-console-page .admin-session-summary-label {
+  color: var(--ds-text-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-console-page .admin-session-summary-note {
+  color: var(--ds-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-console-page .admin-session-summary strong {
+  color: var(--ds-red);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (min-width: 1025px) {
+  .admin-console-page .admin-create-actions {
+    gap: 10px !important;
+  }
+
+  .admin-console-page .admin-dashboard-actions .ant-btn,
+  .admin-console-page .admin-create-actions .ant-btn {
+    min-height: 40px;
+    padding-inline: 14px;
+  }
+
+  .admin-console-page .ant-table-wrapper .ant-table-thead > tr > th {
+    font-weight: 700;
+  }
+
+  .admin-console-page .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: rgba(218, 41, 28, 0.06);
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-console-page .admin-dashboard-actions,
+  .admin-console-page .admin-create-actions {
+    width: 100%;
+    gap: 8px !important;
+  }
+
+  .admin-console-page .admin-dashboard-actions .ant-btn,
+  .admin-console-page .admin-create-actions .ant-btn {
+    min-height: 42px;
+  }
+
+  .admin-console-page .admin-event-select {
+    width: 100% !important;
+  }
+
+  .admin-console-page .admin-dashboard-toolbar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-console-page .admin-dashboard-select-row {
+    width: 100%;
+  }
+
+  .admin-console-page .admin-dashboard-action-panel {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .admin-console-page .admin-dashboard-actions .ant-space-item {
+    width: 100%;
+  }
+
+  .admin-console-page .ant-table-wrapper {
+    margin-inline: -8px;
+    padding-inline: 8px;
+  }
+
+  .admin-console-page .admin-session-summary {
+    width: 100%;
+    grid-template-columns: auto 1fr;
+    gap: 3px 8px;
+  }
+
+  .admin-console-page .admin-session-summary-label,
+  .admin-console-page .admin-session-summary-note,
+  .admin-console-page .admin-session-summary strong {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-console-page .admin-dashboard-actions .ant-btn,
+  .admin-console-page .admin-create-actions .ant-btn {
+    width: 100%;
+  }
+
+  .admin-console-page .admin-console-hero-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-console-page .admin-console-tabs .ant-tabs-tab {
+    padding: 8px 6px;
+  }
+
+  .admin-console-page .admin-create-card .ant-card-body {
+    padding: 14px;
+  }
+
+  .admin-console-page .ant-card-head-title {
+    white-space: normal;
+  }
+}
