@@ -8,7 +8,7 @@ const polygonCollapsed = (cx, cy, vertexCount) => {
   return `polygon(${pairs})`;
 };
 
-const getThemeTransitionClipPaths = (variant, cx, cy, maxRadius, viewportWidth, viewportHeight) => {
+export const getThemeTransitionClipPaths = (variant, cx, cy, maxRadius, viewportWidth, viewportHeight) => {
   switch (variant) {
     case 'square': {
       const halfW = Math.max(cx, viewportWidth - cx);

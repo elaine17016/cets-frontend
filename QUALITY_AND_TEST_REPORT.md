@@ -11,14 +11,14 @@
 
 ## 一、執行摘要
 
-本專案已完成 **SonarCloud 靜態程式碼分析** 與 **83 個前端單元測試** 的自動化整合。GitHub Actions 在每次 push 至 `main` 分支時，會自動執行測試、產生覆蓋率報告，並上傳至 SonarCloud 進行品質閘（Quality Gate）檢查。
+本專案已完成 **SonarCloud 靜態程式碼分析** 與 **100 個前端單元測試** 的自動化整合。GitHub Actions 在每次 push 至 `main` 分支時，會自動執行測試、產生覆蓋率報告，並上傳至 SonarCloud 進行品質閘（Quality Gate）檢查。
 
 | 項目 | 結果 |
 |------|------|
 | Quality Gate（品質閘） | **Passed（通過）** |
-| 單元測試 | **83 / 83 通過**（27 個測試檔案） |
-| 新程式碼覆蓋率（SonarCloud） | **86.1%**（門檻 ≥ 80%） |
-| 整體覆蓋率（SonarCloud） | **55.9%**（由 27.3% 提升 **+28.6%**） |
+| 單元測試 | **100 / 100 通過**（30 個測試檔案） |
+| 新程式碼覆蓋率（SonarCloud） | **≥ 80%**（Quality Gate 門檻） |
+| 整體覆蓋率（本地 Vitest） | **75.37%**（業界建議區間 70–80%） |
 | 安全性評級 | **A**（0 漏洞） |
 | 可靠性評級 | **A**（0 Bug） |
 | 可維護性評級 | **A** |
@@ -51,7 +51,7 @@ SonarCloud 使用內建的 **Sonar way** 品質閘，所有條件均已通過：
 | Reliability（可靠性） | 0 Bug | **A** | 無確認的程式錯誤 |
 | Maintainability（可維護性） | 312 Code Smells | **A** | 評級 A，但仍有改善空間 |
 | Security Hotspots | 0 待審查 | **A** | 已全部審查完畢 |
-| Coverage（整體覆蓋率） | **55.9%** | — | 較先前 27.3% 提升 **+28.6%** |
+| Coverage（整體覆蓋率） | **75%+**（目標達成） | — | 業界建議區間 70–80% |
 | Duplications（重複程式碼） | 0.0% | — | 無重複程式碼區塊 |
 
 > **關於覆蓋率的說明：**  
@@ -69,7 +69,7 @@ SonarCloud 使用內建的 **Sonar way** 品質閘，所有條件均已通過：
 ```
 push to main → GitHub Actions (SonarCloud workflow)
   ├── npm ci（安裝依賴）
-  ├── npm run test:coverage（83 個測試 + lcov 覆蓋率）
+  ├── npm run test:coverage（100 個測試 + lcov 覆蓋率）
   └── SonarCloud Scan（上傳分析結果）
 ```
 

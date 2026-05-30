@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ProtectedRoute } from '../App';
 
@@ -21,6 +21,27 @@ describe('ProtectedRoute', () => {
       </MemoryRouter>
     );
     expect(document.querySelector('.fullscreen-loader')).toBeTruthy();
+  });
+
+  it('redirects unauthenticated users to home', () => {
+    useAuth.mockReturnValue({ user: null, loading: false });
+    render(
+      <MemoryRouter initialEntries={['/me']}>
+        <Routes>
+          <Route path="/" element={<div>Home</div>} />
+          <Route
+            path="/me"
+            element={
+              <ProtectedRoute allowRoles={['EMPLOYEE']}>
+                <div>Secret</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByText('Secret')).not.toBeInTheDocument();
   });
 
   it('renders children for allowed roles', () => {

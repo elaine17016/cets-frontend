@@ -16,12 +16,19 @@ vi.mock('recharts', () => ({}));
 
 import {
   adminStateReducer,
+  buildCreatePayload,
   createDefaultCreateValues,
+  getErrorMessage,
+  getEventId,
+  getSessionId,
   mergeDashboardSessionsLottery,
   normalizeCoverImageUrlForBackend,
   normalizeSessionsLotteryRows,
+  resolveLimitedLotteryAt,
+  resolveLimitedWaitlistCloseAt,
   resolveSessionTicketFields,
-  stripEligibilityMarkerForBackend
+  stripEligibilityMarkerForBackend,
+  validateSessionTimeline
 } from '../AdminConsolePage';
 
 describe('AdminConsole helpers', () => {
@@ -86,5 +93,56 @@ describe('AdminConsole helpers', () => {
     });
     expect(resolved.adultTicket.id).toBe('adult');
     expect(resolved.childTicket.id).toBe('child');
+  });
+
+  it('formats API and validation errors', () => {
+    expect(getErrorMessage({ error: { message: '名額已滿' } }, 'fallback')).toBe('名額已滿');
+    expect(getErrorMessage({ detail: 'bad request' }, 'fallback')).toBe('bad request');
+    expect(getErrorMessage({ detail: [{ msg: '欄位錯誤' }] }, 'fallback')).toBe('欄位錯誤');
+    expect(getErrorMessage({ httpStatus: 404 }, 'fallback')).toContain('404');
+    expect(getErrorMessage({}, 'fallback')).toBe('fallback');
+  });
+
+  it('extracts event and session ids from nested API responses', () => {
+    expect(getEventId({ data: { id: 'evt-1' } })).toBe('evt-1');
+    expect(getEventId({ event_id: 'evt-2' })).toBe('evt-2');
+    expect(getSessionId({ data: { session_id: 'sess-1' } })).toBe('sess-1');
+    expect(getSessionId({ id: 'sess-2' })).toBe('sess-2');
+  });
+
+  it('derives lottery and waitlist timestamps for limited mode', () => {
+    const closesAt = '2026-06-01T12:00:00+08:00';
+    const lotteryAt = resolveLimitedLotteryAt(closesAt);
+    expect(lotteryAt.format('YYYY-MM-DD HH:mm')).toBe('2026-06-01 12:01');
+
+    const startsAt = '2026-06-10T09:00:00+08:00';
+    const waitlist = resolveLimitedWaitlistCloseAt({}, startsAt);
+    expect(waitlist.format('YYYY-MM-DD HH:mm')).toBe('2026-06-10 08:59');
+  });
+
+  it('validates registration timeline ordering', () => {
+    const values = createDefaultCreateValues();
+    expect(() => validateSessionTimeline(values)).not.toThrow();
+
+    const invalid = {
+      ...values,
+      registration_opens_at: values.registration_closes_at
+    };
+    expect(() => validateSessionTimeline(invalid)).toThrow('報名開放時間必須早於報名截止時間');
+  });
+
+  it('builds create payloads for limited and unlimited modes', () => {
+    const limited = buildCreatePayload(createDefaultCreateValues());
+    expect(limited.title).toContain('家庭日');
+    expect(limited.sessions[0].ticket_types).toHaveLength(2);
+    expect(limited.description).not.toContain('CETS_ELIGIBILITY');
+
+    const unlimited = buildCreatePayload({
+      ...createDefaultCreateValues(),
+      registration_mode: 'UNLIMITED',
+      description: 'Hello <!--CETS_ELIGIBILITY:{}--> World'
+    });
+    expect(unlimited.sessions[0].ticket_types[0].name).toContain('不限額');
+    expect(unlimited.description).toBe('Hello  World');
   });
 });

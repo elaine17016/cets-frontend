@@ -310,6 +310,137 @@ export const resolveSessionTicketFields = (session) => {
   return { adultTicket, childTicket };
 };
 
+export const getErrorMessage = (error, fallback) => {
+  if (error?.error?.message) return error.error.message;
+  if (typeof error?.detail === 'string') return error.detail;
+  if (Array.isArray(error?.detail)) {
+    const joined = error.detail
+      .flatMap((d) => {
+        const msg = typeof d?.msg === 'string' ? d.msg : JSON.stringify(d);
+        return msg ? [msg] : [];
+      })
+      .join('；');
+    if (joined) return joined;
+  }
+  if (error?.message) return error.message;
+  if (error?.httpStatus === 404) return '後端找不到此 API（HTTP 404），可能尚未部署此端點';
+  return fallback;
+};
+
+export const getEventId = (eventLike) =>
+  eventLike?.data?.id || eventLike?.data?.event_id || eventLike?.id || eventLike?.event_id || '';
+
+export const getSessionId = (sessionLike) =>
+  sessionLike?.data?.id || sessionLike?.data?.session_id || sessionLike?.id || sessionLike?.session_id || '';
+
+export const resolveLimitedLotteryAt = (registrationClosesAt) => {
+  const closesAt = dayjs(registrationClosesAt);
+  if (!closesAt.isValid()) return closesAt;
+  return closesAt.add(1, 'minute');
+};
+
+export const resolveLimitedWaitlistCloseAt = (values, startsAt) => {
+  const manual = values?.waitlist_close_at ? dayjs(values.waitlist_close_at) : null;
+  if (manual?.isValid()) {
+    return manual;
+  }
+  return dayjs(startsAt).subtract(1, 'minute');
+};
+
+export const validateSessionTimeline = (values) => {
+  const registrationMode = values.registration_mode || 'LIMITED';
+  const sessions = Array.isArray(values.sessions) ? values.sessions : [];
+  const startsAtValue = sessions.reduce((min, session) => {
+    const cur = session?.starts_at;
+    if (!cur) return min;
+    if (!min) return cur;
+    const a = dayjs(min);
+    const b = dayjs(cur);
+    if (!a.isValid()) return cur;
+    if (!b.isValid()) return min;
+    return b.isBefore(a) ? cur : min;
+  }, null);
+  const startsAt = startsAtValue ? dayjs(startsAtValue) : null;
+  const registrationOpensAt = values.registration_opens_at ? dayjs(values.registration_opens_at) : null;
+  const registrationClosesAt = values.registration_closes_at ? dayjs(values.registration_closes_at) : null;
+  const lotteryAt = resolveLimitedLotteryAt(registrationClosesAt);
+  const waitlistCloseAt = resolveLimitedWaitlistCloseAt(values, startsAt);
+
+  if (!startsAt || !registrationOpensAt || !registrationClosesAt) {
+    return;
+  }
+  if (!registrationOpensAt.isBefore(registrationClosesAt)) {
+    throw new Error('報名開放時間必須早於報名截止時間');
+  }
+  if (!registrationClosesAt.isBefore(startsAt)) {
+    throw new Error('報名截止時間必須早於活動開始時間');
+  }
+  if (registrationMode === 'LIMITED') {
+    if (!registrationClosesAt.isBefore(lotteryAt)) {
+      throw new Error('抽籤時間必須晚於報名截止時間');
+    }
+    if (!lotteryAt.isBefore(waitlistCloseAt)) {
+      throw new Error('候補截止時間必須晚於抽籤時間');
+    }
+    if (!waitlistCloseAt.isBefore(startsAt)) {
+      throw new Error('候補截止時間必須早於活動開始時間');
+    }
+  }
+};
+
+export const buildCreatePayload = (values) => {
+  const fallbackNow = dayjs().second(0).millisecond(0);
+  const registrationMode = values.registration_mode || 'LIMITED';
+  const registrationClosesAt = values.registration_closes_at || fallbackNow.add(7, 'day');
+  const isUnlimited = registrationMode === 'UNLIMITED';
+  const lotteryAt = isUnlimited ? dayjs(registrationClosesAt).add(1, 'minute') : resolveLimitedLotteryAt(registrationClosesAt);
+  const sessionsInput = Array.isArray(values.sessions) ? values.sessions : [];
+  const startsAtForWaitlist = sessionsInput?.[0]?.starts_at || fallbackNow.add(14, 'day');
+  const waitlistCloseAt = isUnlimited
+    ? dayjs(startsAtForWaitlist).subtract(1, 'minute')
+    : resolveLimitedWaitlistCloseAt(values, startsAtForWaitlist);
+  const sessions = (sessionsInput || []).map((s) => {
+    const starts = dayjs(s?.starts_at || fallbackNow.add(14, 'day'));
+    const ends = dayjs(s?.ends_at || starts.add(3, 'hour'));
+    const closes = dayjs(registrationClosesAt);
+    const opens = dayjs(values.registration_opens_at || fallbackNow);
+    const lottery = dayjs(lotteryAt);
+    const waitlist = dayjs(waitlistCloseAt);
+    const adultQuota = Math.max(0, Number(s?.adult_quota || 0));
+    const requireChildTicket = Boolean(s?.require_child_ticket);
+    const childQuota = requireChildTicket ? Math.max(0, Number(s?.child_quota || 0)) : 0;
+    const totalQuota = isUnlimited ? 999999 : adultQuota + childQuota;
+    const ticketTypes = isUnlimited
+      ? [{ name: '一般票（不限額）', quota: totalQuota, sort_order: 0, audience: 'EMPLOYEE' }]
+      : requireChildTicket
+        ? [
+          { name: '成人票', quota: adultQuota, sort_order: 0, audience: 'EMPLOYEE' },
+          { name: '兒童票', quota: childQuota, sort_order: 1, audience: 'DEPENDENT' }
+        ]
+        : [{ name: '成人票', quota: adultQuota, sort_order: 0, audience: 'EMPLOYEE' }];
+    return {
+      ...defaultSession,
+      title: s?.title,
+      venue: s?.venue,
+      starts_at: starts.toISOString(),
+      ends_at: ends.toISOString(),
+      registration_opens_at: opens.toISOString(),
+      registration_closes_at: closes.toISOString(),
+      lottery_at: lottery.toISOString(),
+      waitlist_close_at: waitlist.toISOString(),
+      ticket_types: ticketTypes
+    };
+  });
+
+  return {
+    title: values.title,
+    description: stripEligibilityMarkerForBackend(values.description || ''),
+    cover_image_url: normalizeCoverImageUrlForBackend(values.cover_image_url),
+    allowed_sites: values.allowed_sites || [],
+    sessions
+  };
+};
+
 const useAdminConsoleController = () => {
   const { user } = useAuth();
   const { refreshList } = useNotifications();
@@ -381,24 +512,6 @@ const useAdminConsoleController = () => {
   const childHasLimits = Form.useWatch('child_has_limits', createForm);
   const adultHealthUnlimited = Form.useWatch('adult_health_unlimited', createForm);
   const childHealthUnlimited = Form.useWatch('child_health_unlimited', createForm);
-  const getErrorMessage = (error, fallback) => {
-    if (error?.error?.message) return error.error.message;
-    if (typeof error?.detail === 'string') return error.detail;
-    if (Array.isArray(error?.detail)) {
-      const joined = error.detail
-        .flatMap((d) => {
-          const msg = typeof d?.msg === 'string' ? d.msg : JSON.stringify(d);
-          return msg ? [msg] : [];
-        })
-        .join('；');
-      if (joined) return joined;
-    }
-    if (error?.message) return error.message;
-    if (error?.httpStatus === 404) return '後端找不到此 API（HTTP 404），可能尚未部署此端點';
-    return fallback;
-  };
-  const getEventId = (eventLike) => eventLike?.data?.id || eventLike?.data?.event_id || eventLike?.id || eventLike?.event_id || '';
-  const getSessionId = (sessionLike) => sessionLike?.data?.id || sessionLike?.data?.session_id || sessionLike?.id || sessionLike?.session_id || '';
   const selectedEvent = useMemo(() => events.find((e) => e.id === selectedEventId), [events, selectedEventId]);
   const dashboardEventOptions = useMemo(() => {
     return events.map((event) => {
@@ -413,63 +526,6 @@ const useAdminConsoleController = () => {
   }, [events]);
   const draftEvents = useMemo(() => events.filter((e) => e.status === 'DRAFT'), [events]);
   const isEditing = Boolean(editingEventId);
-
-  const resolveLimitedLotteryAt = (registrationClosesAt) => {
-    const closesAt = dayjs(registrationClosesAt);
-    if (!closesAt.isValid()) return closesAt;
-    // 後端抽籤批次改為「每分鐘掃描可抽籤場次」，前端以「報名截止後 + 1 分鐘」作為 lottery_at，
-    // 讓測試流程可在幾分鐘內完成。
-    return closesAt.add(1, 'minute');
-  };
-
-  const resolveLimitedWaitlistCloseAt = (values, startsAt) => {
-    const manual = values?.waitlist_close_at ? dayjs(values.waitlist_close_at) : null;
-    if (manual?.isValid()) {
-      return manual;
-    }
-    return dayjs(startsAt).subtract(1, 'minute');
-  };
-
-  const validateSessionTimeline = (values) => {
-    const registrationMode = values.registration_mode || 'LIMITED';
-    const sessions = Array.isArray(values.sessions) ? values.sessions : [];
-    const startsAtValue = sessions.reduce((min, session) => {
-        const cur = session?.starts_at;
-        if (!cur) return min;
-        if (!min) return cur;
-        const a = dayjs(min);
-        const b = dayjs(cur);
-        if (!a.isValid()) return cur;
-        if (!b.isValid()) return min;
-        return b.isBefore(a) ? cur : min;
-      }, null);
-    const startsAt = startsAtValue ? dayjs(startsAtValue) : null;
-    const registrationOpensAt = values.registration_opens_at ? dayjs(values.registration_opens_at) : null;
-    const registrationClosesAt = values.registration_closes_at ? dayjs(values.registration_closes_at) : null;
-    const lotteryAt = resolveLimitedLotteryAt(registrationClosesAt);
-    const waitlistCloseAt = resolveLimitedWaitlistCloseAt(values, startsAt);
-
-    if (!startsAt || !registrationOpensAt || !registrationClosesAt) {
-      return;
-    }
-    if (!registrationOpensAt.isBefore(registrationClosesAt)) {
-      throw new Error('報名開放時間必須早於報名截止時間');
-    }
-    if (!registrationClosesAt.isBefore(startsAt)) {
-      throw new Error('報名截止時間必須早於活動開始時間');
-    }
-    if (registrationMode === 'LIMITED') {
-      if (!registrationClosesAt.isBefore(lotteryAt)) {
-        throw new Error('抽籤時間必須晚於報名截止時間');
-      }
-      if (!lotteryAt.isBefore(waitlistCloseAt)) {
-        throw new Error('候補截止時間必須晚於抽籤時間');
-      }
-      if (!waitlistCloseAt.isBefore(startsAt)) {
-        throw new Error('候補截止時間必須早於活動開始時間');
-      }
-    }
-  };
 
   const loadEvents = useCallback(async () => {
     const res = isAdminFull
@@ -516,59 +572,6 @@ const useAdminConsoleController = () => {
   useEffect(() => {
     loadDashboard(selectedEventId).catch(() => {});
   }, [loadDashboard, selectedEventId]);
-
-  const buildCreatePayload = (values) => {
-    const fallbackNow = dayjs().second(0).millisecond(0);
-    const registrationMode = values.registration_mode || 'LIMITED';
-    const registrationClosesAt = values.registration_closes_at || fallbackNow.add(7, 'day');
-    const isUnlimited = registrationMode === 'UNLIMITED';
-    const lotteryAt = isUnlimited ? dayjs(registrationClosesAt).add(1, 'minute') : resolveLimitedLotteryAt(registrationClosesAt);
-    const sessionsInput = Array.isArray(values.sessions) ? values.sessions : [];
-    const startsAtForWaitlist = sessionsInput?.[0]?.starts_at || fallbackNow.add(14, 'day');
-    const waitlistCloseAt = isUnlimited
-      ? dayjs(startsAtForWaitlist).subtract(1, 'minute')
-      : resolveLimitedWaitlistCloseAt(values, startsAtForWaitlist);
-    const sessions = (sessionsInput || []).map((s) => {
-      const starts = dayjs(s?.starts_at || fallbackNow.add(14, 'day'));
-      const ends = dayjs(s?.ends_at || starts.add(3, 'hour'));
-      const closes = dayjs(registrationClosesAt);
-      const opens = dayjs(values.registration_opens_at || fallbackNow);
-      const lottery = dayjs(lotteryAt);
-      const waitlist = dayjs(waitlistCloseAt);
-      const adultQuota = Math.max(0, Number(s?.adult_quota || 0));
-      const requireChildTicket = Boolean(s?.require_child_ticket);
-      const childQuota = requireChildTicket ? Math.max(0, Number(s?.child_quota || 0)) : 0;
-      const totalQuota = isUnlimited ? 999999 : adultQuota + childQuota;
-      const ticketTypes = isUnlimited
-        ? [{ name: '一般票（不限額）', quota: totalQuota, sort_order: 0, audience: 'EMPLOYEE' }]
-        : requireChildTicket
-          ? [
-            { name: '成人票', quota: adultQuota, sort_order: 0, audience: 'EMPLOYEE' },
-            { name: '兒童票', quota: childQuota, sort_order: 1, audience: 'DEPENDENT' }
-          ]
-          : [{ name: '成人票', quota: adultQuota, sort_order: 0, audience: 'EMPLOYEE' }];
-      return {
-        ...defaultSession,
-        title: s?.title,
-        venue: s?.venue,
-        starts_at: starts.toISOString(),
-        ends_at: ends.toISOString(),
-        registration_opens_at: opens.toISOString(),
-        registration_closes_at: closes.toISOString(),
-        lottery_at: lottery.toISOString(),
-        waitlist_close_at: waitlist.toISOString(),
-        ticket_types: ticketTypes
-      };
-    });
-
-    return {
-      title: values.title,
-      description: stripEligibilityMarkerForBackend(values.description || ''),
-      cover_image_url: normalizeCoverImageUrlForBackend(values.cover_image_url),
-      allowed_sites: values.allowed_sites || [],
-      sessions
-    };
-  };
 
   const createEvent = async (publishAfterCreate) => {
     if (!isAdminFull) {
