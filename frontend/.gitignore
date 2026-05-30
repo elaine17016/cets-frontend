@@ -27,9 +27,3 @@ dist-ssr
 .env
 .env.local
 .env.*.local
-
-# Test & Sonar artifacts
-coverage/
-.scannerwork/
-test-results/
-playwright-report/

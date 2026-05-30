@@ -168,7 +168,6 @@ const defaultSession = {
   ]
 };
 const PIE_COLORS = ['#2b72d9', '#2a9d8f', '#f4a261', '#9b5de5', '#f28482'];
-const now = dayjs();
 
 /** 儀表板 sessions_lottery 列（後端欄位可能用 id 或別名） */
 const normalizeSessionsLotteryRows = (raw) => {
@@ -201,47 +200,51 @@ const mergeDashboardSessionsLottery = (dash, eventDetail) => {
     registered_pending: undefined
   }));
 };
-const defaultCreateValues = {
-  title: '',
-  cover_image_url: EVENT_IMAGES[0],
-  registration_mode: 'LIMITED',
-  adult_has_limits: false,
-  adult_gender: 'ANY',
-  adult_height_min_cm: null,
-  adult_height_max_cm: null,
-  adult_age_min: null,
-  adult_age_max: null,
-  adult_health_unlimited: true,
-  adult_health_no_diseases: [],
-  child_has_limits: false,
-  child_age_min: null,
-  child_age_max: null,
-  child_health_unlimited: true,
-  child_health_no_diseases: [],
-  adult_other_restrictions: '',
-  child_other_restrictions: '',
-  session_count: 1,
-  sessions: [
-    {
-      title: '',
-      venue: '',
-      starts_at: null,
-      ends_at: null,
-      adult_quota: null,
-      require_child_ticket: true,
-      child_quota: null
-    }
-  ],
-  registration_closes_at: null,
-  registration_opens_at: null,
-  lottery_at: null,
-  waitlist_close_at: null,
-  allowed_sites: []
+const createDefaultCreateValues = () => {
+  const current = dayjs().second(0).millisecond(0);
+  const sessionStartsAt = current.add(14, 'day');
+
+  return {
+    title: '2026 春季家庭日',
+    cover_image_url: EVENT_IMAGES[0],
+    registration_mode: 'LIMITED',
+    adult_has_limits: false,
+    adult_gender: 'ANY',
+    adult_height_min_cm: null,
+    adult_height_max_cm: null,
+    adult_age_min: null,
+    adult_age_max: null,
+    adult_health_unlimited: true,
+    adult_health_no_diseases: [],
+    child_has_limits: false,
+    child_age_min: null,
+    child_age_max: null,
+    child_health_unlimited: true,
+    child_health_no_diseases: [],
+    adult_other_restrictions: '',
+    child_other_restrictions: '',
+    session_count: 1,
+    sessions: [
+      {
+        title: '第 1 場',
+        venue: '新竹園區戶外廣場',
+        starts_at: sessionStartsAt,
+        ends_at: sessionStartsAt.add(3, 'hour'),
+        adult_quota: 120,
+        require_child_ticket: true,
+        child_quota: 80
+      }
+    ],
+    registration_closes_at: current.add(7, 'day'),
+    registration_opens_at: current,
+    lottery_at: current.add(7, 'day').add(3, 'hour'),
+    waitlist_close_at: current.add(10, 'day'),
+    allowed_sites: ['HSINCHU']
+  };
 };
 
 const adminInitialState = {
   events: [],
-  localDraftEvents: [],
   selectedEventId: '',
   dashboard: null,
   registrations: [],
@@ -250,7 +253,8 @@ const adminInitialState = {
   publishing: false,
   cancelling: false,
   exportingSync: false,
-  siteCount: null,
+  deletingDraftId: '',
+  publishingDraftId: '',
   editLoading: false,
   activeTabKey: 'event-create',
   editingEventId: '',
@@ -317,7 +321,6 @@ const useAdminConsoleController = () => {
   }, []);
   const {
     events,
-    localDraftEvents,
     selectedEventId,
     dashboard,
     registrations,
@@ -326,14 +329,14 @@ const useAdminConsoleController = () => {
     publishing,
     cancelling,
     exportingSync,
-    siteCount,
+    deletingDraftId,
+    publishingDraftId,
     editLoading,
     activeTabKey,
     editingEventId,
     autoLotteryRunning
   } = adminState;
   const setEvents = useCallback((value) => setAdminState('events', value), [setAdminState]);
-  const setLocalDraftEvents = useCallback((value) => setAdminState('localDraftEvents', value), [setAdminState]);
   const setSelectedEventId = useCallback((value) => setAdminState('selectedEventId', value), [setAdminState]);
   const setDashboard = useCallback((value) => setAdminState('dashboard', value), [setAdminState]);
   const setRegistrations = useCallback((value) => setAdminState('registrations', value), [setAdminState]);
@@ -342,15 +345,21 @@ const useAdminConsoleController = () => {
   const setPublishing = useCallback((value) => setAdminState('publishing', value), [setAdminState]);
   const setCancelling = useCallback((value) => setAdminState('cancelling', value), [setAdminState]);
   const setExportingSync = useCallback((value) => setAdminState('exportingSync', value), [setAdminState]);
-  const setSiteCount = useCallback((value) => setAdminState('siteCount', value), [setAdminState]);
+  const setDeletingDraftId = useCallback((value) => setAdminState('deletingDraftId', value), [setAdminState]);
+  const setPublishingDraftId = useCallback((value) => setAdminState('publishingDraftId', value), [setAdminState]);
   const setEditLoading = useCallback((value) => setAdminState('editLoading', value), [setAdminState]);
   const setActiveTabKey = useCallback((value) => setAdminState('activeTabKey', value), [setAdminState]);
   const setEditingEventId = useCallback((value) => setAdminState('editingEventId', value), [setAdminState]);
   const setAutoLotteryRunning = useCallback((value) => setAdminState('autoLotteryRunning', value), [setAdminState]);
   const [createForm] = Form.useForm();
+  const initialCreateValues = useMemo(() => createDefaultCreateValues(), []);
+  const resetCreateFormToDefaults = useCallback(() => {
+    createForm.resetFields();
+    createForm.setFieldsValue(createDefaultCreateValues());
+  }, [createForm]);
   const createRegistrationMode = Form.useWatch('registration_mode', createForm) || 'LIMITED';
   const selectedCoverImage = Form.useWatch('cover_image_url', createForm) || '';
-  const watchedSessions = Form.useWatch('sessions', createForm) || [];
+  const watchedSessions = Form.useWatch('sessions', createForm) || EMPTY_ARRAY;
   const latestSessionEndLabel = useMemo(() => {
     const max = (watchedSessions || []).reduce((m, session) => {
       const cur = session?.ends_at;
@@ -462,62 +471,68 @@ const useAdminConsoleController = () => {
     }
   };
 
-  const loadEvents = async (draftsOverride) => {
-    const drafts = draftsOverride || localDraftEvents;
-    const res = await apiClient.getEvents({ scope: 'all', page: 1, page_size: 50 });
+  const loadEvents = useCallback(async () => {
+    const res = isAdminFull
+      ? await apiClient.adminGetEvents({ page: 1, page_size: 50 })
+      : await apiClient.getEvents({ scope: 'all', page: 1, page_size: 50 });
     const fetchedItems = res.data.items || [];
     const merged = [...fetchedItems];
-    drafts.forEach((draft) => {
-      if (!merged.find((e) => e.id === draft.id)) {
-        merged.unshift(draft);
-      }
-    });
     setEvents(merged);
-    if (!selectedEventId && merged.length) {
-      setSelectedEventId(merged[0].id);
-    }
-  };
+    setSelectedEventId((current) => {
+      if (current && merged.some((event) => event.id === current)) {
+        return current;
+      }
+      return merged[0]?.id || '';
+    });
+    return merged;
+  }, [isAdminFull, setEvents, setSelectedEventId]);
 
-  const loadDashboard = async (eventId) => {
-    if (!eventId) return;
+  const loadDashboard = useCallback(async (eventId) => {
+    if (!eventId) {
+      setDashboard(null);
+      setRegistrations([]);
+      return;
+    }
     const [dashboardRes, regRes, eventRes] = await Promise.all([
       apiClient.adminGetDashboard(eventId).catch(() => ({ data: {} })),
       apiClient
         .adminGetRegistrations(eventId, { page: 1, page_size: 20, mask_pii: true })
         .catch(() => ({ data: { items: [] } })),
-      apiClient.getEvent(eventId).catch(() => ({ data: null }))
+      (isAdminFull ? apiClient.adminGetEvent(eventId) : apiClient.getEvent(eventId))
+        .catch(() => ({ data: null }))
     ]);
     const dash = dashboardRes.data || {};
     const eventData = eventRes?.data ?? null;
     const sessionsLottery = mergeDashboardSessionsLottery(dash, eventData);
     setDashboard({ ...dash, sessions_lottery: sessionsLottery });
     setRegistrations(regRes.data?.items || []);
-  };
+  }, [isAdminFull, setDashboard, setRegistrations]);
 
   useEffect(() => {
     setLoading(true);
     loadEvents().finally(() => setLoading(false));
-  }, []);
+  }, [loadEvents, setLoading]);
 
   useEffect(() => {
     loadDashboard(selectedEventId).catch(() => {});
-  }, [selectedEventId]);
+  }, [loadDashboard, selectedEventId]);
 
   const buildCreatePayload = (values) => {
+    const fallbackNow = dayjs().second(0).millisecond(0);
     const registrationMode = values.registration_mode || 'LIMITED';
-    const registrationClosesAt = values.registration_closes_at || now.add(7, 'day');
+    const registrationClosesAt = values.registration_closes_at || fallbackNow.add(7, 'day');
     const isUnlimited = registrationMode === 'UNLIMITED';
     const lotteryAt = isUnlimited ? dayjs(registrationClosesAt).add(1, 'minute') : resolveLimitedLotteryAt(registrationClosesAt);
     const sessionsInput = Array.isArray(values.sessions) ? values.sessions : [];
-    const startsAtForWaitlist = sessionsInput?.[0]?.starts_at || now.add(14, 'day');
+    const startsAtForWaitlist = sessionsInput?.[0]?.starts_at || fallbackNow.add(14, 'day');
     const waitlistCloseAt = isUnlimited
       ? dayjs(startsAtForWaitlist).subtract(1, 'minute')
       : resolveLimitedWaitlistCloseAt(values, startsAtForWaitlist);
     const sessions = (sessionsInput || []).map((s) => {
-      const starts = dayjs(s?.starts_at || now.add(14, 'day'));
+      const starts = dayjs(s?.starts_at || fallbackNow.add(14, 'day'));
       const ends = dayjs(s?.ends_at || starts.add(3, 'hour'));
       const closes = dayjs(registrationClosesAt);
-      const opens = dayjs(values.registration_opens_at);
+      const opens = dayjs(values.registration_opens_at || fallbackNow);
       const lottery = dayjs(lotteryAt);
       const waitlist = dayjs(waitlistCloseAt);
       const adultQuota = Math.max(0, Number(s?.adult_quota || 0));
@@ -568,7 +583,7 @@ const useAdminConsoleController = () => {
       const { sessions = [], ...eventPayload } = payload;
       const created = await apiClient.adminCreateEvent(eventPayload);
       const createdEventId = getEventId(created);
-      const createdEvent = created?.data?.id ? created.data : null;
+      const createdEvent = created?.data && typeof created.data === 'object' ? created.data : null;
       if (!createdEventId) {
         throw new Error('後端未回傳新活動 ID，請稍後在儀表板確認是否已建立');
       }
@@ -586,15 +601,9 @@ const useAdminConsoleController = () => {
           await Promise.all((ticketTypes || []).map((tt) => apiClient.adminCreateTicketType(createdSessionId, tt)));
         }));
       }
-      let nextDrafts = localDraftEvents;
-      if (createdEvent?.status === 'DRAFT') {
-        nextDrafts = [createdEvent, ...localDraftEvents.filter((e) => e.id !== createdEvent.id)];
-        setLocalDraftEvents(nextDrafts);
-      }
       if (publishAfterCreate) {
         try {
           await apiClient.adminPublishEvent(createdEventId);
-          setLocalDraftEvents((prev) => prev.filter((e) => e.id !== createdEventId));
           message.success('活動建立並發布成功');
         } catch (publishError) {
           const code = publishError?.error?.code;
@@ -607,8 +616,8 @@ const useAdminConsoleController = () => {
       } else {
         message.success('草稿活動建立成功');
       }
-      createForm.resetFields();
-      await loadEvents(nextDrafts);
+      resetCreateFormToDefaults();
+      await loadEvents();
       setSelectedEventId(createdEventId);
       await loadDashboard(createdEventId);
     } catch (error) {
@@ -626,11 +635,11 @@ const useAdminConsoleController = () => {
 
   const resetEditMode = () => {
     setEditingEventId('');
-    setSiteCount(null);
-    createForm.resetFields();
+    resetCreateFormToDefaults();
   };
 
   const buildEditInitialValues = (detail) => {
+    const defaults = createDefaultCreateValues();
     const sessions = Array.isArray(detail?.sessions) ? detail.sessions : [];
     const firstSession = sessions[0] || {};
     const { adultTicket, childTicket } = resolveSessionTicketFields(firstSession);
@@ -639,7 +648,7 @@ const useAdminConsoleController = () => {
       || String(adultTicket?.name || '').includes('不限');
 
     return {
-      ...defaultCreateValues,
+      ...defaults,
       title: detail?.title || '',
       description: cleanDescription || '',
       cover_image_url: EVENT_IMAGES.includes(resolvePublicAssetUrl(detail?.cover_image_url))
@@ -663,26 +672,29 @@ const useAdminConsoleController = () => {
             child_quota: Number(sessionChildTicket?.quota || 0)
           };
         })
-        : defaultCreateValues.sessions,
-      registration_closes_at: firstSession?.registration_closes_at ? dayjs(firstSession.registration_closes_at) : defaultCreateValues.registration_closes_at,
-      registration_opens_at: firstSession?.registration_opens_at ? dayjs(firstSession.registration_opens_at) : defaultCreateValues.registration_opens_at,
-      waitlist_close_at: firstSession?.waitlist_close_at ? dayjs(firstSession.waitlist_close_at) : defaultCreateValues.waitlist_close_at,
-      lottery_at: firstSession?.lottery_at ? dayjs(firstSession.lottery_at) : defaultCreateValues.lottery_at,
+        : defaults.sessions,
+      registration_closes_at: firstSession?.registration_closes_at ? dayjs(firstSession.registration_closes_at) : defaults.registration_closes_at,
+      registration_opens_at: firstSession?.registration_opens_at ? dayjs(firstSession.registration_opens_at) : defaults.registration_opens_at,
+      waitlist_close_at: firstSession?.waitlist_close_at ? dayjs(firstSession.waitlist_close_at) : defaults.waitlist_close_at,
+      lottery_at: firstSession?.lottery_at ? dayjs(firstSession.lottery_at) : defaults.lottery_at,
       allowed_sites: detail?.allowed_sites || []
     };
   };
 
   const enterEditMode = async (eventId) => {
     if (!eventId) return;
+    if (!isAdminFull) {
+      message.warning('你目前是唯讀管理員（ADMIN_VIEWER），無法編輯活動');
+      return;
+    }
     setEditLoading(true);
     try {
-      const res = await apiClient.getEvent(eventId);
+      const res = await apiClient.adminGetEvent(eventId);
       const detail = res.data || {};
       createForm.setFieldsValue(buildEditInitialValues(detail));
       setEditingEventId(eventId);
       setSelectedEventId(eventId);
       setActiveTabKey('event-create');
-      handleSitePreview(detail?.allowed_sites || []).catch(() => {});
       message.success('已載入活動資料，可完整編輯所有欄位');
     } catch (error) {
       message.error(getErrorMessage(error, '載入活動資料失敗'));
@@ -700,7 +712,6 @@ const useAdminConsoleController = () => {
     setPublishing(true);
     try {
       await apiClient.adminPublishEvent(selectedEventId);
-      setLocalDraftEvents((prev) => prev.filter((e) => e.id !== selectedEventId));
       message.success('活動已發布');
       await loadEvents();
       await loadDashboard(selectedEventId);
@@ -736,7 +747,6 @@ const useAdminConsoleController = () => {
       await apiClient.adminPatchEvent(editingEventId, payload);
       if (publishAfterSave) {
         await apiClient.adminPublishEvent(editingEventId);
-        setLocalDraftEvents((prev) => prev.filter((e) => e.id !== editingEventId));
         message.success('活動已更新並發布');
       } else {
         message.success('活動更新成功');
@@ -794,13 +804,64 @@ const useAdminConsoleController = () => {
     }
   };
 
-  const handleSitePreview = async (sites) => {
-    if (!sites?.length) {
-      setSiteCount(null);
+  const handleDeleteDraft = (eventRecord) => {
+    if (!eventRecord?.id) return;
+    if (!isAdminFull) {
+      message.warning('你目前是唯讀管理員（ADMIN_VIEWER），無法刪除草稿');
       return;
     }
-    const res = await apiClient.adminGetSiteEmployeeCount(sites);
-    setSiteCount(res.data);
+    Modal.confirm({
+      title: '刪除草稿',
+      content: `確定要刪除「${eventRecord.title || '未命名草稿'}」嗎？此動作無法復原。`,
+      okText: '刪除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        setDeletingDraftId(eventRecord.id);
+        try {
+          await apiClient.adminCancelEvent(eventRecord.id, '刪除草稿');
+          if (editingEventId === eventRecord.id) {
+            resetEditMode();
+          }
+          message.success('草稿已刪除');
+          const nextEvents = await loadEvents();
+          const nextSelectedEventId = selectedEventId === eventRecord.id
+            ? nextEvents.find((event) => event.id !== eventRecord.id)?.id || ''
+            : selectedEventId;
+          setSelectedEventId(nextSelectedEventId);
+          await loadDashboard(nextSelectedEventId);
+        } catch (error) {
+          message.error(getErrorMessage(error, '刪除草稿失敗'));
+          throw error;
+        } finally {
+          setDeletingDraftId('');
+        }
+      }
+    });
+  };
+
+  const handlePublishDraft = async (eventRecord) => {
+    if (!eventRecord?.id) return;
+    if (!isAdminFull) {
+      message.warning('你目前是唯讀管理員（ADMIN_VIEWER），無法發佈草稿');
+      return;
+    }
+    setPublishingDraftId(eventRecord.id);
+    try {
+      await apiClient.adminPublishEvent(eventRecord.id);
+      if (editingEventId === eventRecord.id) {
+        resetEditMode();
+      }
+      message.success('草稿已發佈');
+      await loadEvents();
+      const nextSelectedEventId = selectedEventId || eventRecord.id;
+      setSelectedEventId(nextSelectedEventId);
+      await loadDashboard(nextSelectedEventId);
+    } catch (error) {
+      message.error(getErrorMessage(error, '發佈草稿失敗'));
+    } finally {
+      setPublishingDraftId('');
+    }
   };
 
   const handleExportSync = async () => {
@@ -881,6 +942,8 @@ const useAdminConsoleController = () => {
     activeTabKey,
     setActiveTabKey,
     createForm,
+    initialCreateValues,
+    resetCreateFormToDefaults,
     createRegistrationMode,
     selectedCoverImage,
     latestSessionEndLabel,
@@ -901,17 +964,19 @@ const useAdminConsoleController = () => {
     publishing,
     cancelling,
     exportingSync,
-    siteCount,
+    deletingDraftId,
+    publishingDraftId,
     editLoading,
     editingEventId,
     autoLotteryRunning,
     handleSelectCoverImage,
-    handleSitePreview,
     handleCreate,
     handleCreateDraft,
     updateEvent,
     resetEditMode,
     enterEditMode,
+    handleDeleteDraft,
+    handlePublishDraft,
     handlePublish,
     handleCancel,
     runInstantLotteryForSelectedEvent,
@@ -987,15 +1052,14 @@ const EventCreateTab = ({ controller }) => (
     <Form
       form={controller.createForm}
       layout="vertical"
-      initialValues={defaultCreateValues}
+      initialValues={controller.initialCreateValues}
       className="admin-create-form"
     >
       <EventBasicFields />
       <TicketRestrictionFields controller={controller} />
       <CoverAndSiteFields controller={controller} />
-      <SessionsFields controller={controller} />
       <RegistrationTimelineFields createRegistrationMode={controller.createRegistrationMode} />
-      <SiteCountPreview siteCount={controller.siteCount} />
+      <SessionsFields controller={controller} />
       <EventCreateActions controller={controller} />
     </Form>
   </Card>
@@ -1178,7 +1242,7 @@ const TicketRestrictionFields = ({ controller }) => {
 };
 
 const CoverAndSiteFields = ({ controller }) => {
-  const { selectedCoverImage, handleSelectCoverImage, handleSitePreview } = controller;
+  const { selectedCoverImage, handleSelectCoverImage } = controller;
 
   return (
     <>
@@ -1187,7 +1251,8 @@ const CoverAndSiteFields = ({ controller }) => {
         <Form.Item name="cover_image_url" noStyle>
           <Input type="hidden" />
         </Form.Item>
-        <div className="admin-cover-choice" role="group" aria-label="活動圖片">
+        <fieldset className="admin-cover-choice">
+          <legend className="sr-only">活動圖片</legend>
           {EVENT_IMAGES.map((src, idx) => (
             <button
               key={src}
@@ -1200,10 +1265,10 @@ const CoverAndSiteFields = ({ controller }) => {
               <img src={src} alt="" loading="lazy" />
             </button>
           ))}
-        </div>
+        </fieldset>
       </Form.Item>
       <Form.Item name="allowed_sites" label="開放廠區" rules={[{ required: true, message: '請至少選擇一個開放廠區' }]}>
-        <Checkbox.Group options={SITES} onChange={handleSitePreview} />
+        <Checkbox.Group options={SITES} />
       </Form.Item>
     </>
   );
@@ -1214,7 +1279,7 @@ const SessionsFields = ({ controller }) => {
 
   return (
     <>
-      <Divider style={{ marginTop: 6 }}>場次設定（每一場需填地點、開始與結束）</Divider>
+      <Divider style={{ marginTop: 6 }}>場次設定</Divider>
 
       <Form.List name="sessions">
         {(fields, { add, remove }) => (
@@ -1397,27 +1462,12 @@ const RegistrationTimelineFields = ({ createRegistrationMode }) => (
   </>
 );
 
-const SiteCountPreview = ({ siteCount }) => (
-  siteCount ? (
-    <Alert
-      type={siteCount.total > 0 ? 'info' : 'warning'}
-      showIcon
-      message={'勾選廠區員工總數（預覽）：' + siteCount.total}
-      description={
-        siteCount.total > 0
-          ? Object.entries(siteCount.sites || {}).map(([site, count]) => (SITE_LABELS[site] || site) + '：' + count).join(' / ')
-          : '這只是開放廠區的人數預覽，不是必填條件；就算顯示 0 也不會擋建立活動。'
-      }
-    />
-  ) : null
-);
-
 const EventCreateActions = ({ controller }) => {
   const {
     isEditing,
     creating,
     isAdminFull,
-    createForm,
+    resetCreateFormToDefaults,
     handleCreate,
     handleCreateDraft,
     updateEvent,
@@ -1428,16 +1478,17 @@ const EventCreateActions = ({ controller }) => {
   return (
     <>
       <Divider />
-      <Space wrap className="admin-create-actions">
+      <div className="admin-create-actions">
         {isEditing ? (
           <>
-            <Button type="primary" onClick={() => updateEvent(false)} loading={creating} disabled={!isAdminFull}>
-              儲存活動
+            <Button type="primary" onClick={() => updateEvent(true)} loading={creating} disabled={!isAdminFull}>
+              發佈
             </Button>
-            <Button onClick={() => updateEvent(true)} loading={creating} disabled={!isAdminFull}>
-              儲存並直接發布
+            <Button onClick={() => updateEvent(false)} loading={creating} disabled={!isAdminFull}>
+              儲存成草稿
             </Button>
             <Button
+              className="admin-create-cancel"
               onClick={() => {
                 resetEditMode();
                 setActiveTabKey('dashboard');
@@ -1448,12 +1499,12 @@ const EventCreateActions = ({ controller }) => {
           </>
         ) : (
           <>
-            <Button type="primary" onClick={handleCreate} loading={creating} disabled={!isAdminFull}>建立並發布活動</Button>
-            <Button onClick={handleCreateDraft} loading={creating} disabled={!isAdminFull}>只建立草稿</Button>
-            <Button onClick={() => createForm.resetFields()}>清除</Button>
+            <Button type="primary" onClick={handleCreate} loading={creating} disabled={!isAdminFull}>發佈</Button>
+            <Button onClick={handleCreateDraft} loading={creating} disabled={!isAdminFull}>儲存成草稿</Button>
+            <Button className="admin-create-cancel" onClick={resetCreateFormToDefaults}>取消編輯</Button>
           </>
         )}
-      </Space>
+      </div>
     </>
   );
 };
@@ -1463,8 +1514,12 @@ const DraftsTab = ({ controller }) => {
     draftEvents,
     editLoading,
     editingEventId,
+    deletingDraftId,
+    publishingDraftId,
     isAdminFull,
-    enterEditMode
+    enterEditMode,
+    handleDeleteDraft,
+    handlePublishDraft
   } = controller;
 
   return (
@@ -1474,7 +1529,7 @@ const DraftsTab = ({ controller }) => {
           <Text className="admin-dashboard-section-label">草稿活動</Text>
           <Title level={4}>未發布活動管理</Title>
           <Paragraph type="secondary">
-            草稿活動會保留在這裡；載入後可回到表單修改欄位，再儲存或直接發布。
+            載入草稿後可回到表單修改欄位，再儲存或發佈。
           </Paragraph>
         </div>
       </div>
@@ -1513,14 +1568,31 @@ const DraftsTab = ({ controller }) => {
             title: '操作',
             key: 'action',
             render: (_, record) => (
-              <Button
-                type="primary"
-                loading={editLoading && editingEventId === record.id}
-                disabled={!isAdminFull}
-                onClick={() => enterEditMode(record.id)}
-              >
-                載入編輯
-              </Button>
+              <Space wrap>
+                <Button
+                  loading={editLoading && editingEventId === record.id}
+                  disabled={!isAdminFull || deletingDraftId === record.id || publishingDraftId === record.id}
+                  onClick={() => enterEditMode(record.id)}
+                >
+                  載入編輯
+                </Button>
+                <Button
+                  type="primary"
+                  loading={publishingDraftId === record.id}
+                  disabled={!isAdminFull || editLoading || deletingDraftId === record.id}
+                  onClick={() => handlePublishDraft(record)}
+                >
+                  立即發佈
+                </Button>
+                <Button
+                  danger
+                  loading={deletingDraftId === record.id}
+                  disabled={!isAdminFull || editLoading || publishingDraftId === record.id}
+                  onClick={() => handleDeleteDraft(record)}
+                >
+                  刪除
+                </Button>
+              </Space>
             )
           }
         ]}
@@ -1586,7 +1658,7 @@ const DashboardTab = ({ controller }) => {
                 <Button type="primary" onClick={handlePublish} loading={publishing} disabled={!isAdminFull || !selectedEvent || selectedEvent.status !== 'DRAFT'}>
                   發布活動
                 </Button>
-                <Button onClick={() => enterEditMode(selectedEventId)} loading={editLoading} disabled={!selectedEvent}>
+                <Button onClick={() => enterEditMode(selectedEventId)} loading={editLoading} disabled={!isAdminFull || !selectedEvent}>
                   編輯活動
                 </Button>
                 <Button danger onClick={handleCancel} loading={cancelling} disabled={!isAdminFull || !selectedEvent}>
