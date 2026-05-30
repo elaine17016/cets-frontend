@@ -11,8 +11,8 @@ vi.mock('../../context/NotificationContext', () => ({
   useNotifications: () => ({
     items: [{
       id: 'n1',
-      title: '報名成功 — 春季家庭日',
-      body: '您已成功報名',
+      title: 'Registration succeeded — Spring Family Day',
+      body: 'You registered successfully',
       type: 'REGISTRATION_CONFIRMED',
       created_at: '2026-05-30T10:00:00+08:00'
     }],
@@ -26,9 +26,9 @@ vi.mock('../../context/NotificationContext', () => ({
 describe('NotificationsPage', () => {
   it('renders notifications and supports mark-all-read', async () => {
     render(<NotificationsPage />);
-    expect(screen.getByText('通知中心')).toBeInTheDocument();
-    expect(await screen.findByText('報名成功 — 春季家庭日')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('全部已讀'));
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
+    expect(await screen.findByText('Registration succeeded — Spring Family Day')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Mark all read'));
     expect(markAllReadMock).toHaveBeenCalled();
   });
 });

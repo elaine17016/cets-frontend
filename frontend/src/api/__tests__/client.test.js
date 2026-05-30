@@ -284,7 +284,7 @@ describe('apiClient endpoint wrappers', () => {
     await apiClient.adminCreateTicketType('sess-1', { name: 'VIP' });
     await apiClient.adminPublishEvent('evt-draft-1');
     await apiClient.adminRunLottery('sess-1');
-    await apiClient.adminCancelEvent('evt-draft-1', '刪除草稿');
+    await apiClient.adminCancelEvent('evt-draft-1', 'DeleteDraft');
     await apiClient.adminGetSiteEmployeeCount(['site-a', 'site-b']);
     await apiClient.adminGetRegistrations('evt-1', { page: 1 });
     await apiClient.adminGetDashboard('evt-1');
@@ -301,7 +301,7 @@ describe('apiClient endpoint wrappers', () => {
     expect(axiosMocks.client.post).toHaveBeenCalledWith('/admin/sessions/sess-1/ticket-types', { name: 'VIP' });
     expect(axiosMocks.client.post).toHaveBeenCalledWith('/admin/events/evt-draft-1/publish');
     expect(axiosMocks.client.post).toHaveBeenCalledWith('/admin/sessions/sess-1/run-lottery');
-    expect(axiosMocks.client.post).toHaveBeenCalledWith('/admin/events/evt-draft-1/cancel', { reason: '刪除草稿' });
+    expect(axiosMocks.client.post).toHaveBeenCalledWith('/admin/events/evt-draft-1/cancel', { reason: 'DeleteDraft' });
     expect(axiosMocks.client.get).toHaveBeenCalledWith('/admin/sites/employee-count', {
       params: { sites: 'site-a,site-b' }
     });

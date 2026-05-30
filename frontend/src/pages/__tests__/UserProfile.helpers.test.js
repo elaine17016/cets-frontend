@@ -21,37 +21,37 @@ describe('UserProfile helpers', () => {
   });
 
   it('normalizes ticket type labels', () => {
-    expect(normalizeTicketTypeLabel('成人票')).toBe('成人');
-    expect(normalizeTicketTypeLabel('兒童票')).toBe('兒童');
+    expect(normalizeTicketTypeLabel('Adult ticket')).toBe('Adult');
+    expect(normalizeTicketTypeLabel('Child ticket')).toBe('Child');
     expect(normalizeTicketTypeLabel('VIP', 'tt-1')).toBe('VIP');
     expect(normalizeTicketTypeLabel('', 'tt-2')).toBe('tt-2');
   });
 
   it('builds fallback event titles from registration metadata', () => {
-    expect(buildFallbackEventTitle({ event_id: 'evt-1' })).toBe('活動 evt-1');
-    expect(buildFallbackEventTitle({ session_id: 'sess-1' })).toBe('活動（場次 sess-1）');
-    expect(buildFallbackEventTitle({})).toBe('活動資訊待同步');
+    expect(buildFallbackEventTitle({ event_id: 'evt-1' })).toBe('Event evt-1');
+    expect(buildFallbackEventTitle({ session_id: 'sess-1' })).toBe('Event (session sess-1)');
+    expect(buildFallbackEventTitle({})).toBe('Event details pending sync');
   });
 
   it('formats QR countdown states', () => {
     const future = dayjs().add(90, 'second').toISOString();
     expect(getQrSecondsRemaining(future)).toBe(90);
     expect(getQrSecondsRemaining(null)).toBeNull();
-    expect(formatQrCountdown(null)).toBe('倒數計算中');
-    expect(formatQrCountdown(0)).toBe('更新中');
-    expect(formatQrCountdown(125)).toBe('剩餘 2:05');
+    expect(formatQrCountdown(null)).toBe('Calculating countdown');
+    expect(formatQrCountdown(0)).toBe('Refreshing');
+    expect(formatQrCountdown(125)).toBe('Remaining 2:05');
   });
 
   it('extracts event titles from notifications', () => {
     expect(eventTitleFromNotification({
-      title: '活動取消 — 春季家庭日',
+      title: 'Event cancelled — Spring Family Day',
       payload: {}
-    })).toBe('春季家庭日');
+    })).toBe('Spring Family Day');
     expect(eventTitleFromNotification({
-      title: '提醒',
-      payload: { event_title: '  直接標題  ' }
-    })).toBe('直接標題');
-    expect(eventTitleFromNotification({ title: '單一標題' })).toBe('單一標題');
+      title: 'Reminder',
+      payload: { event_title: '  Direct title  ' }
+    })).toBe('Direct title');
+    expect(eventTitleFromNotification({ title: 'Single title' })).toBe('Single title');
   });
 
   it('enriches registrations using notification payload titles', () => {
@@ -61,13 +61,13 @@ describe('UserProfile helpers', () => {
       created_at: '2026-05-01T10:00:00+08:00'
     }];
     const notifications = [{
-      title: '報名成功 — 春季家庭日',
+      title: 'Registration succeeded — Spring Family Day',
       created_at: '2026-05-01T10:05:00+08:00',
       payload: { registration_id: 'reg-1', session_id: 'sess-1' }
     }];
 
     const enriched = enrichRegistrationsFromNotifications(regs, notifications);
-    expect(enriched[0].event_title).toBe('春季家庭日');
+    expect(enriched[0].event_title).toBe('Spring Family Day');
     expect(enrichRegistrationsFromNotifications([], notifications)).toEqual([]);
   });
 

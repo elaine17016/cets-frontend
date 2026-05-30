@@ -18,7 +18,7 @@ describe('VerifierPage', () => {
         error: '',
         manualPayload: '',
         result: null,
-        scannerHint: '尚未啟動掃描',
+        scannerHint: 'Scanner idle',
         scanning: false
       },
       statusTone: 'idle',
@@ -30,9 +30,9 @@ describe('VerifierPage', () => {
     });
 
     render(<VerifierPage />);
-    expect(screen.getByText('驗票端')).toBeInTheDocument();
-    expect(screen.getByText('開啟相機掃描')).toBeInTheDocument();
-    expect(screen.getByText('待命')).toBeInTheDocument();
+    expect(screen.getByText('Ticket verification')).toBeInTheDocument();
+    expect(screen.getByText('Start camera scan')).toBeInTheDocument();
+    expect(screen.getByText('Idle')).toBeInTheDocument();
   });
 
   it('renders success and error result panels', () => {
@@ -40,7 +40,7 @@ describe('VerifierPage', () => {
       videoRef: { current: null },
       state: {
         deviceId: 'scanner-A-01',
-        error: '票券已核銷',
+        error: 'Ticket already verified',
         manualPayload: 'payload',
         result: {
           ok: true,
@@ -50,7 +50,7 @@ describe('VerifierPage', () => {
             used_at: '2026-05-30'
           }
         },
-        scannerHint: '核銷成功：可入場',
+        scannerHint: 'Verified — entry allowed',
         scanning: true
       },
       statusTone: 'success',
@@ -62,9 +62,9 @@ describe('VerifierPage', () => {
     });
 
     render(<VerifierPage />);
-    expect(screen.getByText('掃描中')).toBeInTheDocument();
-    expect(screen.getByText('核銷成功')).toBeInTheDocument();
-    expect(screen.getByText('票券已核銷')).toBeInTheDocument();
-    expect(screen.getByText('停止掃描')).toBeInTheDocument();
+    expect(screen.getByText('Scanning')).toBeInTheDocument();
+    expect(screen.getByText('Verification succeeded')).toBeInTheDocument();
+    expect(screen.getByText('Ticket already verified')).toBeInTheDocument();
+    expect(screen.getByText('Stop scanning')).toBeInTheDocument();
   });
 });

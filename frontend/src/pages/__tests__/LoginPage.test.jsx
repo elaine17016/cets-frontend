@@ -14,15 +14,15 @@ describe('LoginPage', () => {
     startOIDCLoginMock.mockResolvedValue(undefined);
     render(<LoginPage />);
 
-    expect(screen.getByText('台積電員工活動平台')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /企業登入/ }));
+    expect(screen.getByText('TSMC employee event platform')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Corporate sign-in/ }));
     expect(startOIDCLoginMock).toHaveBeenCalled();
   });
 
   it('shows an error message when OIDC login fails', async () => {
-    startOIDCLoginMock.mockRejectedValue({ error: { message: '後端不可用' } });
+    startOIDCLoginMock.mockRejectedValue({ error: { message: 'Backend unavailable' } });
     render(<LoginPage />);
-    fireEvent.click(screen.getByRole('button', { name: /企業登入/ }));
-    expect(await screen.findByText('後端不可用')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Corporate sign-in/ }));
+    expect(await screen.findByText('Backend unavailable')).toBeInTheDocument();
   });
 });

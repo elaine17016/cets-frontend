@@ -19,7 +19,7 @@ describe('OIDCCallbackPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText(/缺少 OIDC callback 參數/)).toBeInTheDocument();
+    expect(screen.getByText(/Missing OIDC callback parameters/)).toBeInTheDocument();
   });
 
   it('completes login and redirects on success', async () => {

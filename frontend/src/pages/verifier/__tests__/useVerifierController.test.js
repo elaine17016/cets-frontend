@@ -31,7 +31,7 @@ const initialState = {
   error: '',
   deviceId: 'scanner-A-01',
   manualPayload: '',
-  scannerHint: '尚未啟動掃描',
+  scannerHint: 'Scanner idle',
   lastDetectedText: '',
   lastDetectedAt: ''
 };
@@ -40,24 +40,24 @@ describe('verifierReducer', () => {
   it('handles scan lifecycle transitions', () => {
     expect(verifierReducer(initialState, { type: 'scanStarting' })).toMatchObject({
       scanning: true,
-      scannerHint: '正在初始化相機...'
+      scannerHint: 'Initializing camera…'
     });
     expect(verifierReducer(initialState, { type: 'scanReady' })).toMatchObject({
       scanning: true,
-      scannerHint: '相機已啟動，等待辨識 QR...'
+      scannerHint: 'Camera ready — waiting for QR code'
     });
     expect(verifierReducer(initialState, { type: 'scanStopped' })).toMatchObject({
       scanning: false,
-      scannerHint: '已停止掃描'
+      scannerHint: 'Scanning stopped'
     });
     expect(verifierReducer(initialState, {
       type: 'scanFailed',
-      error: '相機失敗',
-      hint: '初始化失敗'
+      error: 'Camera failed',
+      hint: 'Initialization failed'
     })).toMatchObject({
       scanning: false,
-      error: '相機失敗',
-      scannerHint: '初始化失敗'
+      error: 'Camera failed',
+      scannerHint: 'Initialization failed'
     });
   });
 
@@ -67,13 +67,13 @@ describe('verifierReducer', () => {
       text: 'qr-1',
       detectedAt: '2026-01-01'
     });
-    expect(detected.scannerHint).toBe('已辨識到 QR，送出核銷中...');
+    expect(detected.scannerHint).toBe('QR detected — verifying…');
 
     const success = verifierReducer(detected, { type: 'verifySuccess', data: { ticket_id: 't1' } });
     expect(success.result).toEqual({ ok: true, data: { ticket_id: 't1' } });
 
-    const failed = verifierReducer(detected, { type: 'verifyFailed', error: '票券無效' });
-    expect(failed.error).toBe('票券無效');
+    const failed = verifierReducer(detected, { type: 'verifyFailed', error: 'Invalid ticket' });
+    expect(failed.error).toBe('Invalid ticket');
   });
 
   it('updates device and manual payload fields', () => {
@@ -85,15 +85,15 @@ describe('verifierReducer', () => {
 
 describe('formatVerifyError', () => {
   it('formats API and plain errors', () => {
-    expect(formatVerifyError({ error: { message: '票券已使用' } })).toBe('票券已使用');
-    expect(formatVerifyError({ message: '網路錯誤' })).toBe('網路錯誤');
-    expect(formatVerifyError({})).toBe('核銷失敗');
+    expect(formatVerifyError({ error: { message: 'Ticket already used' } })).toBe('Ticket already used');
+    expect(formatVerifyError({ message: 'Network error' })).toBe('Network error');
+    expect(formatVerifyError({})).toBe('Verification failed');
     expect(formatVerifyError({
       error: {
-        message: '票券無效',
+        message: 'Invalid ticket',
         details: { ticket_id: 't1', request_id: 'req-1', gate: 'A' }
       }
-    })).toBe('票券無效（ticket_id: t1 · gate: A）');
+    })).toBe('Invalid ticket（ticket_id: t1 · gate: A）');
   });
 });
 
@@ -107,8 +107,8 @@ describe('scanner miss helpers', () => {
   });
 
   it('returns actionable hints for scanner misses', () => {
-    expect(getScannerMissHint(FormatException.getFormatInstance())).toContain('畫面不完整');
-    expect(getScannerMissHint(NotFoundException.getNotFoundInstance())).toContain('尚未辨識到 QR');
+    expect(getScannerMissHint(FormatException.getFormatInstance())).toContain('incomplete');
+    expect(getScannerMissHint(NotFoundException.getNotFoundInstance())).toContain('QR code not detected yet');
   });
 });
 
@@ -147,7 +147,7 @@ describe('useVerifierController', () => {
 
   it('surfaces verify failures from the API', async () => {
     verifyTicketMock.mockRejectedValue({
-      error: { message: '票券已核銷', details: { ticket_id: 't-1' } }
+      error: { message: 'Ticket already verified', details: { ticket_id: 't-1' } }
     });
     const { result } = renderHook(() => useVerifierController());
 
@@ -161,7 +161,7 @@ describe('useVerifierController', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.state.error).toContain('票券已核銷');
+      expect(result.current.state.error).toContain('Ticket already verified');
     });
     expect(result.current.statusTone).toBe('error');
   });

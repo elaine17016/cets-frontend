@@ -23,8 +23,8 @@ describe('EventsList helpers', () => {
 
   const baseEvent = {
     id: 'evt-1',
-    title: '春季家庭日',
-    venue: '新竹廣場',
+    title: 'Spring Family Day',
+    venue: 'Hsinchu plaza',
     allowed_sites: ['HSINCHU'],
     status: 'PUBLISHED',
     is_registration_open: true,
@@ -45,8 +45,8 @@ describe('EventsList helpers', () => {
   it('determines registration eligibility and status labels', () => {
     expect(canRegisterEventForRole(baseEvent, 'EMPLOYEE')).toBe(true);
     expect(canRegisterEventForRole(baseEvent, 'ADMIN')).toBe(false);
-    expect(getPrimaryEventStatus(baseEvent, 'EMPLOYEE')).toEqual({ label: '可報名', color: 'success' });
-    expect(getPrimaryEventStatus({ ...baseEvent, status: 'CANCELLED' }, 'EMPLOYEE').label).toBe('已取消');
+    expect(getPrimaryEventStatus(baseEvent, 'EMPLOYEE')).toEqual({ label: 'Open for registration', color: 'success' });
+    expect(getPrimaryEventStatus({ ...baseEvent, status: 'CANCELLED' }, 'EMPLOYEE').label).toBe('Cancelled');
     expect(getEventStatusFilterValue(baseEvent, 'EMPLOYEE')).toBe('open');
     expect(getEventStatusFilterValue({ ...baseEvent, is_eligible: false }, 'EMPLOYEE')).toBe('ineligible');
   });
@@ -54,10 +54,10 @@ describe('EventsList helpers', () => {
   it('filters and sorts visible events', () => {
     const events = [
       baseEvent,
-      { ...baseEvent, id: 'evt-2', title: '台北晚會', is_registration_open: false, created_at: '2026-05-21T10:00:00+08:00' }
+      { ...baseEvent, id: 'evt-2', title: 'Taipei evening event', is_registration_open: false, created_at: '2026-05-21T10:00:00+08:00' }
     ];
     const filtered = filterVisibleEvents(events, {
-      keyword: '春季',
+      keyword: 'Spring',
       dateWindow: 'all',
       statusFilter: 'all'
     }, 'EMPLOYEE');

@@ -11,17 +11,17 @@ import {
 
 describe('EventDetail helpers', () => {
   it('formats registration errors', () => {
-    expect(registrationErrMsg({ error: { message: '名額已滿' } })).toBe('名額已滿');
+    expect(registrationErrMsg({ error: { message: 'Quota full' } })).toBe('Quota full');
     expect(isAlreadyRegisteredError({ error: { code: 'ALREADY_REGISTERED' } })).toBe(true);
-    expect(isAlreadyRegisteredError({ detail: '已報名此場次' })).toBe(true);
+    expect(isAlreadyRegisteredError({ detail: 'Already registered for this session' })).toBe(true);
   });
 
   it('labels ticket audiences and picks defaults', () => {
-    expect(getTicketAudienceLabel({ audience: 'EMPLOYEE', name: '成人票' })).toBe('成人');
-    expect(getTicketAudienceLabel({ audience: 'DEPENDENT', name: '兒童票' })).toBe('兒童');
+    expect(getTicketAudienceLabel({ audience: 'EMPLOYEE', name: 'Adult ticket' })).toBe('Adult');
+    expect(getTicketAudienceLabel({ audience: 'DEPENDENT', name: 'Child ticket' })).toBe('Child');
     expect(getDefaultTicketType([
-      { id: 'child', name: '兒童票', audience: 'DEPENDENT' },
-      { id: 'adult', name: '成人票', audience: 'EMPLOYEE' }
+      { id: 'child', name: 'Child ticket', audience: 'DEPENDENT' },
+      { id: 'adult', name: 'Adult ticket', audience: 'EMPLOYEE' }
     ]).id).toBe('adult');
   });
 
@@ -41,8 +41,8 @@ describe('EventDetail helpers', () => {
     }, {
       type: 'open',
       session: { id: 'sess-1' },
-      ticketTypes: [{ id: 'tt-1', name: '成人票', audience: 'EMPLOYEE' }],
-      ticketType: { id: 'tt-1', name: '成人票', audience: 'EMPLOYEE' }
+      ticketTypes: [{ id: 'tt-1', name: 'Adult ticket', audience: 'EMPLOYEE' }],
+      ticketType: { id: 'tt-1', name: 'Adult ticket', audience: 'EMPLOYEE' }
     });
     expect(opened.open).toBe(true);
     expect(opened.ticketType.id).toBe('tt-1');

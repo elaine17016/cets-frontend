@@ -36,12 +36,12 @@ describe('AdminConsole helpers', () => {
   it('normalizes dashboard lottery session rows', () => {
     expect(normalizeSessionsLotteryRows(null)).toEqual([]);
     expect(normalizeSessionsLotteryRows([
-      { id: 'sess-1', title: '第一場', lottery_at: '2026-06-01', pending_count: 3 },
+      { id: 'sess-1', title: 'Session 1', lottery_at: '2026-06-01', pending_count: 3 },
       { session_id: '', title: 'skip me' }
     ])).toEqual([
       {
         session_id: 'sess-1',
-        title: '第一場',
+        title: 'Session 1',
         lottery_at: '2026-06-01',
         lottery_executed_at: null,
         registered_pending: 3
@@ -63,7 +63,7 @@ describe('AdminConsole helpers', () => {
 
   it('creates default event form values', () => {
     const values = createDefaultCreateValues();
-    expect(values.title).toContain('家庭日');
+    expect(values.title).toContain('Family Day');
     expect(values.sessions).toHaveLength(1);
     expect(values.allowed_sites).toEqual(['HSINCHU']);
   });
@@ -88,8 +88,8 @@ describe('AdminConsole helpers', () => {
   it('resolves adult and child ticket fields from session ticket types', () => {
     const resolved = resolveSessionTicketFields({
       ticket_types: [
-        { name: '成人票', audience: 'EMPLOYEE', id: 'adult' },
-        { name: '兒童票', audience: 'DEPENDENT', id: 'child' }
+        { name: 'Adult ticket', audience: 'EMPLOYEE', id: 'adult' },
+        { name: 'Child ticket', audience: 'DEPENDENT', id: 'child' }
       ]
     });
     expect(resolved.adultTicket.id).toBe('adult');
@@ -97,9 +97,9 @@ describe('AdminConsole helpers', () => {
   });
 
   it('formats API and validation errors', () => {
-    expect(getErrorMessage({ error: { message: '名額已滿' } }, 'fallback')).toBe('名額已滿');
+    expect(getErrorMessage({ error: { message: 'Quota full' } }, 'fallback')).toBe('Quota full');
     expect(getErrorMessage({ detail: 'bad request' }, 'fallback')).toBe('bad request');
-    expect(getErrorMessage({ detail: [{ msg: '欄位錯誤' }] }, 'fallback')).toBe('欄位錯誤');
+    expect(getErrorMessage({ detail: [{ msg: 'Field error' }] }, 'fallback')).toBe('Field error');
     expect(getErrorMessage({ httpStatus: 404 }, 'fallback')).toContain('404');
     expect(getErrorMessage({}, 'fallback')).toBe('fallback');
   });
@@ -129,12 +129,12 @@ describe('AdminConsole helpers', () => {
       ...values,
       registration_opens_at: values.registration_closes_at
     };
-    expect(() => validateSessionTimeline(invalid)).toThrow('報名開放時間必須早於報名截止時間');
+    expect(() => validateSessionTimeline(invalid)).toThrow('Registration open time must be before registration close time');
   });
 
   it('builds create payloads for limited and unlimited modes', () => {
     const limited = buildCreatePayload(createDefaultCreateValues());
-    expect(limited.title).toContain('家庭日');
+    expect(limited.title).toContain('Family Day');
     expect(limited.sessions[0].ticket_types).toHaveLength(2);
     expect(limited.description).not.toContain('CETS_ELIGIBILITY');
 
@@ -143,7 +143,7 @@ describe('AdminConsole helpers', () => {
       registration_mode: 'UNLIMITED',
       description: 'Hello <!--CETS_ELIGIBILITY:{}--> World'
     });
-    expect(unlimited.sessions[0].ticket_types[0].name).toContain('不限額');
+    expect(unlimited.sessions[0].ticket_types[0].name).toContain('unlimited');
     expect(unlimited.description).toBe('Hello  World');
   });
 });

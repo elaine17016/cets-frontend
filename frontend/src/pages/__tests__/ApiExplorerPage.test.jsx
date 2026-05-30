@@ -49,19 +49,19 @@ describe('ApiExplorerPage', () => {
 
   it('renders API endpoint groups and health check actions', () => {
     render(<ApiExplorerPage />);
-    expect(screen.getByText('Auth / 身分驗證')).toBeInTheDocument();
-    expect(screen.getByText('管理員')).toBeInTheDocument();
-    expect(screen.getByText('一鍵執行整合檢查')).toBeInTheDocument();
+    expect(screen.getByText('Auth / identity')).toBeInTheDocument();
+    expect(screen.getByText('Admin APIs')).toBeInTheDocument();
+    expect(screen.getByText('Run integration checks')).toBeInTheDocument();
   });
 
   it('runs integrated checks and shows report', async () => {
     render(<ApiExplorerPage />);
-    fireEvent.click(screen.getByText('一鍵執行整合檢查'));
+    fireEvent.click(screen.getByText('Run integration checks'));
 
     await waitFor(() => {
       expect(apiMocks.getMe).toHaveBeenCalled();
     });
-    expect(await screen.findByText('檢查結果')).toBeInTheDocument();
+    expect(await screen.findByText('Check results')).toBeInTheDocument();
     expect(screen.getByText(/Admin User/)).toBeInTheDocument();
   });
 });

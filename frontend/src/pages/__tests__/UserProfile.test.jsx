@@ -41,9 +41,9 @@ describe('UserProfile page', () => {
         items: [{
           id: 'reg-1',
           status: 'CONFIRMED',
-          event_title: '春季家庭日',
-          session_title: '第一場',
-          ticket_type_name: '成人票'
+          event_title: 'Spring Family Day',
+          session_title: 'Session 1',
+          ticket_type_name: 'Adult ticket'
         }]
       }
     });
@@ -54,9 +54,9 @@ describe('UserProfile page', () => {
           registration_id: 'reg-1',
           status: 'ISSUED',
           issued_at: '2026-05-01T10:00:00+08:00',
-          event_title: '春季家庭日',
-          session_title: '第一場',
-          ticket_type_name: '成人票'
+          event_title: 'Spring Family Day',
+          session_title: 'Session 1',
+          ticket_type_name: 'Adult ticket'
         }]
       }
     });
@@ -66,25 +66,25 @@ describe('UserProfile page', () => {
     render(<UserProfile />);
     expect(await screen.findByText(/Alice/)).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText('員工資訊')).toBeInTheDocument();
+      expect(screen.getByText('Employee info')).toBeInTheDocument();
     });
-    expect(screen.getByText('我的報名')).toBeInTheDocument();
-    expect(screen.getByText('我的票匣')).toBeInTheDocument();
+    expect(screen.getByText('My registrations')).toBeInTheDocument();
+    expect(screen.getByText('My tickets')).toBeInTheDocument();
   });
 
   it('renders ticket cards in the default tickets tab', async () => {
     render(<UserProfile />);
-    expect(await screen.findByText('春季家庭日')).toBeInTheDocument();
-    expect(screen.getByText('放棄票券')).toBeInTheDocument();
-    expect(screen.getByText('已發行')).toBeInTheDocument();
+    expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
+    expect(screen.getByText('Forfeit ticket')).toBeInTheDocument();
+    expect(screen.getByText('Issued')).toBeInTheDocument();
   });
 
   it('switches to registrations tab', async () => {
     render(<UserProfile />);
     await screen.findByText(/Alice/);
-    fireEvent.click(screen.getByText('我的報名'));
+    fireEvent.click(screen.getByText('My registrations'));
     await waitFor(() => {
-      expect(screen.getAllByText('春季家庭日').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Spring Family Day').length).toBeGreaterThan(0);
     });
   });
 });

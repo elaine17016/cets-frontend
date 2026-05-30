@@ -35,9 +35,9 @@ describe('Header', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('晶彩活動通')).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('開啟帳號功能'));
-    expect(screen.getByText('我的票匣')).toBeInTheDocument();
-    expect(screen.getByText('通知中心')).toBeInTheDocument();
+    expect(screen.getByText('CETS Events')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Open account menu'));
+    expect(screen.getByText('My tickets')).toBeInTheDocument();
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
 });

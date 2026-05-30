@@ -1,16 +1,20 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import EventDetail from '../EventDetail';
+import { fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const getEventMock = vi.fn();
-const getMyRegistrationsMock = vi.fn();
+const eventDetailMocks = vi.hoisted(() => ({
+  getEvent: vi.fn(),
+  getMyRegistrations: vi.fn(),
+  createRegistration: vi.fn()
+}));
 
 vi.mock('../../api/client', () => ({
   apiClient: {
-    getEvent: (...args) => getEventMock(...args),
-    getMyRegistrations: (...args) => getMyRegistrationsMock(...args),
+    getEvent: (...args) => eventDetailMocks.getEvent(...args),
+    getMyRegistrations: (...args) => eventDetailMocks.getMyRegistrations(...args),
+    createRegistration: (...args) => eventDetailMocks.createRegistration(...args),
     getAccessToken: () => 'token'
   }
 }));
@@ -22,9 +26,11 @@ vi.mock('../../context/AuthContext', () => ({
   })
 }));
 
-describe('EventDetail page', () => {
+import EventDetail from '../EventDetail';
+
+describe('EventDetail registration flow', () => {
   beforeEach(() => {
-    getEventMock.mockResolvedValue({
+    eventDetailMocks.getEvent.mockResolvedValue({
       data: {
         id: 'evt-1',
         title: 'Spring Family Day',
@@ -46,10 +52,11 @@ describe('EventDetail page', () => {
         }]
       }
     });
-    getMyRegistrationsMock.mockResolvedValue({ data: { items: [] } });
+    eventDetailMocks.getMyRegistrations.mockResolvedValue({ data: { items: [] } });
+    eventDetailMocks.createRegistration.mockResolvedValue({ data: { id: 'reg-1' } });
   });
 
-  it('renders event detail after loading', async () => {
+  it('opens registration dialog and submits registration', async () => {
     render(
       <MemoryRouter initialEntries={['/events/evt-1']}>
         <Routes>
@@ -59,9 +66,14 @@ describe('EventDetail page', () => {
     );
 
     expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
-    expect(screen.getByText('Sessions and ticket types')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Register for this session'));
+
+    expect(await screen.findByText('I confirm eligibility and register')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/I confirm that I meet this ticket type requirements/i));
+    fireEvent.click(screen.getByRole('button', { name: 'I confirm eligibility and register' }));
+
     await waitFor(() => {
-      expect(getEventMock).toHaveBeenCalledWith('evt-1');
+      expect(eventDetailMocks.createRegistration).toHaveBeenCalled();
     });
   });
 });

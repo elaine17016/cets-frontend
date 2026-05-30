@@ -19,8 +19,8 @@ describe('MobileBottomBar', () => {
         <MobileBottomBar />
       </MemoryRouter>
     );
-    expect(screen.getByText('首頁')).toBeInTheDocument();
-    expect(screen.getByText('通知')).toBeInTheDocument();
-    expect(screen.getByText('票匣')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Alerts')).toBeInTheDocument();
+    expect(screen.getByText('Tickets')).toBeInTheDocument();
   });
 });

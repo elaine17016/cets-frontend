@@ -31,7 +31,7 @@ describe('EventsList page', () => {
       data: {
         items: [{
           id: 'evt-1',
-          title: '春季家庭日',
+          title: 'Spring Family Day',
           status: 'PUBLISHED',
           is_registration_open: true,
           is_eligible: true,
@@ -45,7 +45,7 @@ describe('EventsList page', () => {
         id: 'evt-1',
         sessions: [{
           id: 'sess-1',
-          venue: '新竹廣場',
+          venue: 'Hsinchu plaza',
           registration_opens_at: '2026-05-01T00:00:00+08:00',
           registration_closes_at: '2026-12-31T23:59:59+08:00',
           status: 'REGISTRATION_OPEN',
@@ -63,9 +63,9 @@ describe('EventsList page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('活動目錄')).toBeInTheDocument();
+      expect(screen.getByText('Event catalog')).toBeInTheDocument();
     });
-    expect(await screen.findByText('春季家庭日')).toBeInTheDocument();
+    expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
     expect(getEventsMock).toHaveBeenCalled();
   });
 });

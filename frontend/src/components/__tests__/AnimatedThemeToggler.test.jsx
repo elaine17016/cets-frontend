@@ -26,7 +26,7 @@ describe('AnimatedThemeToggler', () => {
 
   it('toggles theme when view transitions are unavailable', () => {
     render(<AnimatedThemeToggler label="Theme" />);
-    fireEvent.click(screen.getByRole('button', { name: '切換為暗黑模式' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
     expect(setColorModeMock).toHaveBeenCalledWith('dark');
     expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
   });

@@ -63,7 +63,7 @@ describe('AdminConsolePage', () => {
       data: {
         items: [{
           id: 'evt-1',
-          title: '2026 春季家庭日',
+          title: '2026 Spring Family Day',
           status: 'PUBLISHED',
           allowed_sites: ['HSINCHU'],
           created_at: '2026-05-01T10:00:00+08:00'
@@ -76,7 +76,7 @@ describe('AdminConsolePage', () => {
         site_distribution: [{ site: 'HSINCHU', count: 8 }],
         ticket_type_progress: [{
           ticket_type_id: 'tt-1',
-          name: '成人票',
+          name: 'Adult ticket',
           quota: 100,
           registered: 20,
           confirmed: 10,
@@ -85,7 +85,7 @@ describe('AdminConsolePage', () => {
         attendance: { total_confirmed: 10, checked_in: 4 },
         sessions_lottery: [{
           session_id: 'sess-1',
-          title: '第一場',
+          title: 'Session 1',
           lottery_at: '2026-06-05T10:00:00+08:00',
           registered_pending: 5
         }]
@@ -96,8 +96,8 @@ describe('AdminConsolePage', () => {
         items: [{
           id: 'reg-1',
           status: 'CONFIRMED',
-          session_title: '第一場',
-          ticket_type_name: '成人票',
+          session_title: 'Session 1',
+          ticket_type_name: 'Adult ticket',
           user: { employee_id: 'E001', name: 'Alice', department: 'IT' }
         }]
       }
@@ -105,37 +105,37 @@ describe('AdminConsolePage', () => {
     adminMocks.adminGetEvent.mockResolvedValue({
       data: {
         id: 'evt-1',
-        sessions: [{ id: 'sess-1', title: '第一場', lottery_at: '2026-06-05T10:00:00+08:00' }]
+        sessions: [{ id: 'sess-1', title: 'Session 1', lottery_at: '2026-06-05T10:00:00+08:00' }]
       }
     });
   });
 
   it('renders admin hero and create form defaults', async () => {
     render(<AdminConsolePage />);
-    expect(await screen.findByText('管理後台')).toBeInTheDocument();
-    expect(screen.getByText('主控台')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2026 春季家庭日')).toBeInTheDocument();
-    expect(screen.getByText('基本資料')).toBeInTheDocument();
+    expect(await screen.findByText('Admin console')).toBeInTheDocument();
+    expect(screen.getByText('Control panel')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('2026 Spring Family Day')).toBeInTheDocument();
+    expect(screen.getByText('Basic info')).toBeInTheDocument();
   });
 
   it('loads dashboard tab with stats and registrations', async () => {
     render(<AdminConsolePage />);
-    await screen.findByText('管理後台');
-    fireEvent.click(screen.getByRole('tab', { name: '儀表板' }));
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: 'Dashboard' }));
 
     await waitFor(() => {
       expect(adminMocks.adminGetDashboard).toHaveBeenCalled();
     });
-    expect(await screen.findByText('報名清單')).toBeInTheDocument();
+    expect(await screen.findByText('Registration list')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('即時抽籤')).toBeInTheDocument();
-    expect(screen.getByText('抽籤執行（依場次）')).toBeInTheDocument();
+    expect(screen.getByText('Run lottery now')).toBeInTheDocument();
+    expect(screen.getByText('Lottery by session')).toBeInTheDocument();
   });
 
   it('shows admin viewer warning when role is read-only', async () => {
     adminMocks.useAuthMock.mockReturnValue({ user: { role: 'ADMIN_VIEWER' } });
 
     render(<AdminConsolePage />);
-    expect(await screen.findByText('你目前是 ADMIN_VIEWER（唯讀）')).toBeInTheDocument();
+    expect(await screen.findByText('You are signed in as ADMIN_VIEWER (read-only)')).toBeInTheDocument();
   });
 });
