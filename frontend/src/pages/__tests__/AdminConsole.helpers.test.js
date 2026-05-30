@@ -125,11 +125,30 @@ describe('AdminConsole helpers', () => {
     const values = createDefaultCreateValues();
     expect(() => validateSessionTimeline(values)).not.toThrow();
 
-    const invalid = {
+    const invalidOpens = {
       ...values,
       registration_opens_at: values.registration_closes_at
     };
-    expect(() => validateSessionTimeline(invalid)).toThrow('Registration open time must be before registration close time');
+    expect(() => validateSessionTimeline(invalidOpens)).toThrow('Registration open time must be before registration close time');
+
+    const invalidCloses = {
+      ...values,
+      registration_closes_at: values.sessions[0].starts_at
+    };
+    expect(() => validateSessionTimeline(invalidCloses)).toThrow('Registration close time must be before event start time');
+  });
+
+  it('builds child ticket payload when required', () => {
+    const payload = buildCreatePayload({
+      ...createDefaultCreateValues(),
+      sessions: [{
+        ...createDefaultCreateValues().sessions[0],
+        require_child_ticket: true,
+        adult_quota: 50,
+        child_quota: 20
+      }]
+    });
+    expect(payload.sessions[0].ticket_types).toHaveLength(2);
   });
 
   it('builds create payloads for limited and unlimited modes', () => {

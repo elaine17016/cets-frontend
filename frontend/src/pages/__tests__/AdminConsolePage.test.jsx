@@ -138,4 +138,25 @@ describe('AdminConsolePage', () => {
     render(<AdminConsolePage />);
     expect(await screen.findByText('You are signed in as ADMIN_VIEWER (read-only)')).toBeInTheDocument();
   });
+
+  it('renders draft events tab when drafts exist', async () => {
+    adminMocks.adminGetEvents.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'draft-1',
+          title: 'Draft Family Day',
+          status: 'DRAFT',
+          allowed_sites: ['HSINCHU'],
+          created_at: '2026-05-01T10:00:00+08:00'
+        }]
+      }
+    });
+
+    render(<AdminConsolePage />);
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: /Draft events/ }));
+
+    expect(await screen.findByText('Draft Family Day')).toBeInTheDocument();
+    expect(screen.getByText('Load for edit')).toBeInTheDocument();
+  });
 });
