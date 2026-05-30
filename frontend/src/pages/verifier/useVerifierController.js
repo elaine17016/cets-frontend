@@ -25,7 +25,7 @@ const QR_READER_OPTIONS = {
   tryPlayVideoTimeout: 8000
 };
 
-const formatVerifyError = (e) => {
+export const formatVerifyError = (e) => {
   const msg = e?.error?.message || e?.message || '核銷失敗';
   const details = e?.error?.details;
   if (!details || typeof details !== 'object') {
@@ -81,7 +81,7 @@ const initialVerifierState = {
   lastDetectedAt: ''
 };
 
-const verifierReducer = (state, action) => {
+export const verifierReducer = (state, action) => {
   switch (action.type) {
     case 'scanStarting':
       return {

@@ -170,7 +170,7 @@ const defaultSession = {
 const PIE_COLORS = ['#2b72d9', '#2a9d8f', '#f4a261', '#9b5de5', '#f28482'];
 
 /** 儀表板 sessions_lottery 列（後端欄位可能用 id 或別名） */
-const normalizeSessionsLotteryRows = (raw) => {
+export const normalizeSessionsLotteryRows = (raw) => {
   if (!Array.isArray(raw) || !raw.length) return [];
   return raw.flatMap((row) => {
     const normalized = {
@@ -186,7 +186,7 @@ const normalizeSessionsLotteryRows = (raw) => {
 };
 
 /** GET /admin/.../dashboard 若未附 sessions_lottery，改由 GET /events/{id} 場次補齊，抽籤按鈕才可操作 */
-const mergeDashboardSessionsLottery = (dash, eventDetail) => {
+export const mergeDashboardSessionsLottery = (dash, eventDetail) => {
   const fromDash = normalizeSessionsLotteryRows(dash?.sessions_lottery);
   if (fromDash.length) return fromDash;
   const fromDashSessions = normalizeSessionsLotteryRows(dash?.sessions);
@@ -200,7 +200,7 @@ const mergeDashboardSessionsLottery = (dash, eventDetail) => {
     registered_pending: undefined
   }));
 };
-const createDefaultCreateValues = () => {
+export const createDefaultCreateValues = () => {
   const current = dayjs().second(0).millisecond(0);
   const sessionStartsAt = current.add(14, 'day');
 
@@ -261,7 +261,7 @@ const adminInitialState = {
   autoLotteryRunning: false
 };
 
-const adminStateReducer = (state, action) => {
+export const adminStateReducer = (state, action) => {
   switch (action.type) {
     case 'set': {
       const nextValue = typeof action.value === 'function'
@@ -274,7 +274,7 @@ const adminStateReducer = (state, action) => {
   }
 };
 
-const normalizeCoverImageUrlForBackend = (value) => {
+export const normalizeCoverImageUrlForBackend = (value) => {
   const trimmed = String(value || '').trim();
   return trimmed ? publicRootPath(trimmed) : null;
 };
@@ -282,7 +282,7 @@ const normalizeCoverImageUrlForBackend = (value) => {
 const CETS_ELIGIBILITY_MARKER_PREFIX = '<!--CETS_ELIGIBILITY:';
 const CETS_ELIGIBILITY_MARKER_SUFFIX = '-->';
 
-const stripEligibilityMarkerForBackend = (rawDescription) => {
+export const stripEligibilityMarkerForBackend = (rawDescription) => {
   const description = String(rawDescription || '');
   const startIdx = description.indexOf(CETS_ELIGIBILITY_MARKER_PREFIX);
   if (startIdx < 0) {
@@ -296,7 +296,7 @@ const stripEligibilityMarkerForBackend = (rawDescription) => {
     .trim();
 };
 
-const resolveSessionTicketFields = (session) => {
+export const resolveSessionTicketFields = (session) => {
   const ticketTypes = Array.isArray(session?.ticket_types) ? session.ticket_types : [];
   const adultTicket =
     ticketTypes.find((t) => String(t?.name || '').includes('成人')) ||

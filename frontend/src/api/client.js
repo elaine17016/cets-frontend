@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+const trimTrailingSlashes = (value) => {
+  const text = String(value || '').trim();
+  let end = text.length;
+  while (end > 0 && text[end - 1] === '/') {
+    end -= 1;
+  }
+  return end === text.length ? text : text.slice(0, end);
+};
+
 const normalizeApiBase = (rawUrl) => {
-  const trimmed = String(rawUrl || '').trim().replace(/\/+$/, '');
+  const trimmed = trimTrailingSlashes(rawUrl);
   if (!trimmed) {
     return '';
   }
@@ -17,7 +26,7 @@ const resolveDefaultApiBase = () => {
 
 const resolveWsBase = (apiBaseUrl) => {
   if (import.meta.env.VITE_WS_BASE_URL) {
-    return String(import.meta.env.VITE_WS_BASE_URL).trim().replace(/\/+$/, '');
+    return trimTrailingSlashes(import.meta.env.VITE_WS_BASE_URL);
   }
   try {
     const api = new URL(apiBaseUrl);

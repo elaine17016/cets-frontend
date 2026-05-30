@@ -14,14 +14,14 @@ const { Title, Paragraph, Text } = Typography;
 const TICKET_QR_IMAGE_SIZE = 640;
 const TICKET_QR_MARGIN_MODULES = 4;
 
-const normalizeTicketTypeLabel = (name, fallbackId = '') => {
+export const normalizeTicketTypeLabel = (name, fallbackId = '') => {
   const text = String(name || '');
   if (/成人/.test(text)) return '成人';
   if (/兒童/.test(text)) return '兒童';
   return text || fallbackId || '-';
 };
 
-const buildFallbackEventTitle = (reg) => {
+export const buildFallbackEventTitle = (reg) => {
   if (reg?.event_id) {
     return `活動 ${reg.event_id}`;
   }
@@ -31,12 +31,12 @@ const buildFallbackEventTitle = (reg) => {
   return '活動資訊待同步';
 };
 
-const getQrSecondsRemaining = (expiresAt) => {
+export const getQrSecondsRemaining = (expiresAt) => {
   if (!expiresAt) return null;
   return Math.max(dayjs(expiresAt).diff(dayjs(), 'second'), 0);
 };
 
-const formatQrCountdown = (seconds) => {
+export const formatQrCountdown = (seconds) => {
   if (seconds === null) return '倒數計算中';
   if (seconds <= 0) return '更新中';
   const minutes = Math.floor(seconds / 60);
@@ -45,7 +45,7 @@ const formatQrCountdown = (seconds) => {
 };
 
 /** 通知 title 常為「前綴 — 活動名」；payload.event_title 若有則優先 */
-const eventTitleFromNotification = (item) => {
+export const eventTitleFromNotification = (item) => {
   const p = item?.payload || {};
   const direct = typeof p.event_title === 'string' ? p.event_title.trim() : '';
   if (direct) return direct;
@@ -62,7 +62,7 @@ const eventTitleFromNotification = (item) => {
 /**
  * 活動已從列表消失（例如管理員取消）時，getEvents 無法補全；用通知 payload 對齊 registration_id / session_id。
  */
-const enrichRegistrationsFromNotifications = (regs, notificationItems) => {
+export const enrichRegistrationsFromNotifications = (regs, notificationItems) => {
   if (!regs.length || !notificationItems.length) return regs;
   const byRegistrationId = new Map();
   const bySessionId = new Map();
@@ -114,7 +114,7 @@ const initialTicketQrModalState = {
   copyingPayload: false
 };
 
-const ticketQrModalReducer = (state, action) => {
+export const ticketQrModalReducer = (state, action) => {
   switch (action.type) {
     case 'loaded':
       return {
