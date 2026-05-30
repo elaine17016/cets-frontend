@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import dayjs from 'dayjs';
 
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: { role: 'ADMIN' } })
@@ -113,11 +114,11 @@ describe('AdminConsole helpers', () => {
   it('derives lottery and waitlist timestamps for limited mode', () => {
     const closesAt = '2026-06-01T12:00:00+08:00';
     const lotteryAt = resolveLimitedLotteryAt(closesAt);
-    expect(lotteryAt.format('YYYY-MM-DD HH:mm')).toBe('2026-06-01 12:01');
+    expect(lotteryAt.diff(dayjs(closesAt), 'minute')).toBe(1);
 
     const startsAt = '2026-06-10T09:00:00+08:00';
     const waitlist = resolveLimitedWaitlistCloseAt({}, startsAt);
-    expect(waitlist.format('YYYY-MM-DD HH:mm')).toBe('2026-06-10 08:59');
+    expect(waitlist.diff(dayjs(startsAt), 'minute')).toBe(-1);
   });
 
   it('validates registration timeline ordering', () => {
