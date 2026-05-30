@@ -10,6 +10,10 @@ const apiMocks = vi.hoisted(() => ({
   getNotifications: vi.fn(),
   getMyRegistrations: vi.fn(),
   getMyTickets: vi.fn(),
+  adminGetSiteEmployeeCount: vi.fn(),
+  adminGetDashboard: vi.fn(),
+  adminGetRegistrations: vi.fn(),
+  verifyTicket: vi.fn(),
   getWsUrl: vi.fn(() => 'ws://localhost'),
   getAccessToken: vi.fn(() => 'token')
 }));
@@ -63,5 +67,20 @@ describe('ApiExplorerPage', () => {
     });
     expect(await screen.findByText('Check results')).toBeInTheDocument();
     expect(screen.getByText(/Admin User/)).toBeInTheDocument();
+  });
+
+  it('runs advanced admin checks', async () => {
+    apiMocks.adminGetSiteEmployeeCount.mockResolvedValue({ data: { total: 42 } });
+    apiMocks.getEvents.mockResolvedValue({ data: { items: [{ id: 'evt-1' }], total: 1 } });
+    apiMocks.adminGetDashboard.mockResolvedValue({ data: { sessions_lottery: [] } });
+    apiMocks.adminGetRegistrations.mockResolvedValue({ data: { items: [] } });
+
+    render(<ApiExplorerPage />);
+    fireEvent.click(screen.getByText('Run advanced API checks'));
+
+    await waitFor(() => {
+      expect(apiMocks.adminGetSiteEmployeeCount).toHaveBeenCalled();
+    });
+    expect(await screen.findByText('Advanced check results')).toBeInTheDocument();
   });
 });
