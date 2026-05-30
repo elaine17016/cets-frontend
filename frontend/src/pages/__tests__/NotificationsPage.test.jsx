@@ -31,4 +31,10 @@ describe('NotificationsPage', () => {
     fireEvent.click(screen.getByText('Mark all read'));
     expect(markAllReadMock).toHaveBeenCalled();
   });
+
+  it('marks a single notification as read when clicked', async () => {
+    render(<NotificationsPage />);
+    fireEvent.click(await screen.findByText('Mark read'));
+    expect(markReadMock).toHaveBeenCalledWith('n1');
+  });
 });

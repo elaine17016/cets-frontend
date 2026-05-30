@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getNotificationsMock: vi.fn(),
-  refreshListMock: vi.fn()
+  refreshMock: vi.fn(),
+  getRefreshTokenMock: vi.fn()
 }));
 
 vi.mock('../AuthContext', () => ({
@@ -15,12 +16,12 @@ vi.mock('../../api/client', () => ({
   apiClient: {
     getWsUrl: () => 'ws://localhost',
     getAccessToken: () => 'token',
-    getRefreshToken: () => null,
+    getRefreshToken: mocks.getRefreshTokenMock,
     getNotifications: mocks.getNotificationsMock,
     getUnreadCount: vi.fn().mockResolvedValue({ data: { unread_count: 0 } }),
     markNotificationRead: vi.fn(),
     markAllRead: vi.fn(),
-    refresh: vi.fn(),
+    refresh: mocks.refreshMock,
     clearAuth: vi.fn()
   }
 }));
@@ -43,8 +44,11 @@ class MockWebSocket {
     this.sent.push(d);
   }
 
-  close() {
+  close(code) {
     this.readyState = 3;
+    if (this.onclose) {
+      this.onclose({ code: code ?? 1000 });
+    }
   }
 }
 
@@ -53,7 +57,8 @@ describe('NotificationContext websocket messages', () => {
     MockWebSocket.instances = [];
     global.WebSocket = MockWebSocket;
     mocks.getNotificationsMock.mockResolvedValue({ data: { items: [], unread_count: 0 } });
-    mocks.refreshListMock.mockClear();
+    mocks.getRefreshTokenMock.mockReturnValue(null);
+    mocks.refreshMock.mockResolvedValue({});
     vi.useFakeTimers();
   });
 
@@ -90,5 +95,69 @@ describe('NotificationContext websocket messages', () => {
 
     expect(ws.sent.some((msg) => msg.includes('"type":"pong"'))).toBe(true);
     expect(mocks.getNotificationsMock).toHaveBeenCalled();
+  });
+
+  it('marks connection as live after auth_ok and refreshes list on EVENT_CANCELLED', async () => {
+    await act(async () => {
+      render(
+        <NotificationProvider>
+          <div />
+        </NotificationProvider>
+      );
+    });
+
+    const ws = MockWebSocket.instances[0];
+    await act(async () => {
+      if (ws.onmessage) {
+        ws.onmessage({ data: JSON.stringify({ type: 'auth_ok' }) });
+      }
+    });
+
+    mocks.getNotificationsMock.mockClear();
+    await act(async () => {
+      if (ws.onmessage) {
+        ws.onmessage({
+          data: JSON.stringify({
+            type: 'notification',
+            data: { id: 'n3', title: 'Cancelled', type: 'EVENT_CANCELLED' }
+          })
+        });
+      }
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(mocks.getNotificationsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 30 })
+    );
+  });
+
+  it('refreshes token and reconnects when websocket closes with code 4001', async () => {
+    mocks.getRefreshTokenMock.mockReturnValue('refresh-token');
+
+    await act(async () => {
+      render(
+        <NotificationProvider>
+          <div />
+        </NotificationProvider>
+      );
+    });
+
+    const firstWs = MockWebSocket.instances[0];
+    await act(async () => {
+      if (firstWs.onclose) {
+        firstWs.onclose({ code: 4001 });
+      }
+    });
+
+    expect(mocks.refreshMock).toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+
+    expect(MockWebSocket.instances.length).toBeGreaterThan(1);
   });
 });

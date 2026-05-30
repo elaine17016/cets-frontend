@@ -1,12 +1,16 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Modal } from 'antd';
 
 const adminMocks = vi.hoisted(() => ({
   adminGetEvents: vi.fn(),
   adminGetDashboard: vi.fn(),
   adminGetRegistrations: vi.fn(),
   adminGetEvent: vi.fn(),
+  adminExportSync: vi.fn(),
+  adminRunLottery: vi.fn(),
+  adminPublishEvent: vi.fn(),
   useAuthMock: vi.fn(() => ({ user: { role: 'ADMIN', name: 'Admin' } }))
 }));
 
@@ -29,11 +33,11 @@ vi.mock('../../api/client', () => ({
     adminCreateEvent: vi.fn(),
     adminCreateSession: vi.fn(),
     adminCreateTicketType: vi.fn(),
-    adminPublishEvent: vi.fn(),
+    adminPublishEvent: adminMocks.adminPublishEvent,
     adminCancelEvent: vi.fn(),
     adminUpdateEvent: vi.fn(),
-    adminRunLottery: vi.fn(),
-    adminExportSync: vi.fn(),
+    adminRunLottery: adminMocks.adminRunLottery,
+    adminExportSync: adminMocks.adminExportSync,
     adminDeleteDraft: vi.fn()
   }
 }));
@@ -108,6 +112,13 @@ describe('AdminConsolePage', () => {
         sessions: [{ id: 'sess-1', title: 'Session 1', lottery_at: '2026-06-05T10:00:00+08:00' }]
       }
     });
+    adminMocks.adminExportSync.mockResolvedValue('id,name\n1,Alice');
+    adminMocks.adminRunLottery.mockResolvedValue({
+      data: { winners_count: 3, total_candidates: 5 }
+    });
+    adminMocks.adminPublishEvent.mockResolvedValue({ data: { id: 'draft-1', status: 'PUBLISHED' } });
+    URL.createObjectURL = vi.fn(() => 'blob:mock');
+    URL.revokeObjectURL = vi.fn();
   });
 
   it('renders admin hero and create form defaults', async () => {
@@ -158,5 +169,92 @@ describe('AdminConsolePage', () => {
 
     expect(await screen.findByText('Draft Family Day')).toBeInTheDocument();
     expect(screen.getByText('Load for edit')).toBeInTheDocument();
+  });
+
+  it('exports registrations as CSV from the dashboard tab', async () => {
+    render(<AdminConsolePage />);
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: 'Dashboard' }));
+    await screen.findByText('Export CSV');
+
+    fireEvent.click(screen.getByText('Export CSV'));
+
+    await waitFor(() => {
+      expect(adminMocks.adminExportSync).toHaveBeenCalledWith('evt-1', { format: 'csv', mask_pii: true });
+    });
+  });
+
+  it('runs session lottery after confirmation', async () => {
+    const confirmSpy = vi.spyOn(Modal, 'confirm').mockImplementation(({ onOk }) => {
+      Promise.resolve(onOk?.());
+      return { destroy: vi.fn(), update: vi.fn() };
+    });
+
+    render(<AdminConsolePage />);
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: 'Dashboard' }));
+    const lotteryButton = await screen.findByRole('button', { name: 'Run lottery' });
+    fireEvent.click(lotteryButton);
+
+    await waitFor(() => {
+      expect(adminMocks.adminRunLottery).toHaveBeenCalledWith('sess-1');
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it('loads a draft event into edit mode', async () => {
+    adminMocks.adminGetEvents.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'draft-1',
+          title: 'Draft Family Day',
+          status: 'DRAFT',
+          allowed_sites: ['HSINCHU'],
+          created_at: '2026-05-01T10:00:00+08:00'
+        }]
+      }
+    });
+    adminMocks.adminGetEvent.mockResolvedValue({
+      data: {
+        id: 'draft-1',
+        title: 'Draft Family Day',
+        status: 'DRAFT',
+        allowed_sites: ['HSINCHU'],
+        sessions: []
+      }
+    });
+
+    render(<AdminConsolePage />);
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: /Draft events/ }));
+    fireEvent.click(await screen.findByText('Load for edit'));
+
+    await waitFor(() => {
+      expect(adminMocks.adminGetEvent).toHaveBeenCalledWith('draft-1');
+    });
+    expect(await screen.findByDisplayValue('Draft Family Day')).toBeInTheDocument();
+  });
+
+  it('publishes a draft event from the dashboard tab', async () => {
+    adminMocks.adminGetEvents.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'draft-1',
+          title: 'Draft Family Day',
+          status: 'DRAFT',
+          allowed_sites: ['HSINCHU'],
+          created_at: '2026-05-01T10:00:00+08:00'
+        }]
+      }
+    });
+
+    render(<AdminConsolePage />);
+    await screen.findByText('Admin console');
+    fireEvent.click(screen.getByRole('tab', { name: 'Dashboard' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Publish event' }));
+
+    await waitFor(() => {
+      expect(adminMocks.adminPublishEvent).toHaveBeenCalledWith('draft-1');
+    });
   });
 });

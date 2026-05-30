@@ -3,11 +3,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { Modal } from 'antd';
 
 const eventDetailMocks = vi.hoisted(() => ({
   getEvent: vi.fn(),
   getMyRegistrations: vi.fn(),
-  createRegistration: vi.fn()
+  createRegistration: vi.fn(),
+  cancelRegistration: vi.fn(),
+  confirmRegistration: vi.fn(),
+  forfeitRegistration: vi.fn()
 }));
 
 vi.mock('../../api/client', () => ({
@@ -15,6 +19,9 @@ vi.mock('../../api/client', () => ({
     getEvent: (...args) => eventDetailMocks.getEvent(...args),
     getMyRegistrations: (...args) => eventDetailMocks.getMyRegistrations(...args),
     createRegistration: (...args) => eventDetailMocks.createRegistration(...args),
+    cancelRegistration: (...args) => eventDetailMocks.cancelRegistration(...args),
+    confirmRegistration: (...args) => eventDetailMocks.confirmRegistration(...args),
+    forfeitRegistration: (...args) => eventDetailMocks.forfeitRegistration(...args),
     getAccessToken: () => 'token'
   }
 }));
@@ -54,6 +61,9 @@ describe('EventDetail registration flow', () => {
     });
     eventDetailMocks.getMyRegistrations.mockResolvedValue({ data: { items: [] } });
     eventDetailMocks.createRegistration.mockResolvedValue({ data: { id: 'reg-1' } });
+    eventDetailMocks.cancelRegistration.mockResolvedValue({});
+    eventDetailMocks.confirmRegistration.mockResolvedValue({});
+    eventDetailMocks.forfeitRegistration.mockResolvedValue({});
   });
 
   it('opens registration dialog and submits registration', async () => {
@@ -75,5 +85,98 @@ describe('EventDetail registration flow', () => {
     await waitFor(() => {
       expect(eventDetailMocks.createRegistration).toHaveBeenCalled();
     });
+  });
+
+  it('cancels an active registration', async () => {
+    eventDetailMocks.getMyRegistrations.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'reg-active',
+          session_id: 'sess-1',
+          ticket_type_id: 'tt-1',
+          ticket_type_name: 'Adult ticket',
+          status: 'REGISTERED'
+        }]
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/events/evt-1']}>
+        <Routes>
+          <Route path="/events/:eventId" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('Cancel registration'));
+
+    await waitFor(() => {
+      expect(eventDetailMocks.cancelRegistration).toHaveBeenCalledWith('reg-active');
+    });
+  });
+
+  it('confirms attendance for a won registration', async () => {
+    eventDetailMocks.getMyRegistrations.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'reg-won',
+          session_id: 'sess-1',
+          ticket_type_id: 'tt-1',
+          ticket_type_name: 'Adult ticket',
+          status: 'WON'
+        }]
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/events/evt-1']}>
+        <Routes>
+          <Route path="/events/:eventId" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('Confirm attendance and receive ticket'));
+
+    await waitFor(() => {
+      expect(eventDetailMocks.confirmRegistration).toHaveBeenCalledWith('reg-won');
+    });
+  });
+
+  it('forfeits a won registration after confirmation', async () => {
+    eventDetailMocks.getMyRegistrations.mockResolvedValue({
+      data: {
+        items: [{
+          id: 'reg-won-2',
+          session_id: 'sess-1',
+          ticket_type_id: 'tt-1',
+          ticket_type_name: 'Adult ticket',
+          status: 'WON'
+        }]
+      }
+    });
+
+    const confirmSpy = vi.spyOn(Modal, 'confirm').mockImplementation(({ onOk }) => {
+      Promise.resolve(onOk?.());
+      return { destroy: vi.fn(), update: vi.fn() };
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/events/evt-1']}>
+        <Routes>
+          <Route path="/events/:eventId" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('Forfeit'));
+
+    await waitFor(() => {
+      expect(eventDetailMocks.forfeitRegistration).toHaveBeenCalledWith('reg-won-2');
+    });
+    confirmSpy.mockRestore();
   });
 });

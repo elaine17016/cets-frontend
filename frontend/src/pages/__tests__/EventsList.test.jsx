@@ -1,12 +1,17 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import EventsList from '../EventsList';
 
 const getEventsMock = vi.fn();
 const getEventMock = vi.fn();
 const startOIDCLoginMock = vi.fn();
+
+const eventsListMocks = vi.hoisted(() => ({
+  user: { role: 'EMPLOYEE', id: 'u1' },
+  authLoading: false
+}));
 
 vi.mock('../../api/client', () => ({
   apiClient: {
@@ -17,14 +22,16 @@ vi.mock('../../api/client', () => ({
 
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({
-    user: { role: 'EMPLOYEE', id: 'u1' },
-    loading: false,
+    user: eventsListMocks.user,
+    loading: eventsListMocks.authLoading,
     startOIDCLogin: startOIDCLoginMock
   })
 }));
 
 describe('EventsList page', () => {
   beforeEach(() => {
+    eventsListMocks.user = { role: 'EMPLOYEE', id: 'u1' };
+    eventsListMocks.authLoading = false;
     getEventsMock.mockReset();
     getEventMock.mockReset();
     getEventsMock.mockResolvedValue({
@@ -67,5 +74,41 @@ describe('EventsList page', () => {
     });
     expect(await screen.findByText('Spring Family Day')).toBeInTheDocument();
     expect(getEventsMock).toHaveBeenCalled();
+  });
+
+  it('renders guest hero and sign-in action when unauthenticated', async () => {
+    eventsListMocks.user = null;
+
+    render(
+      <MemoryRouter>
+        <EventsList />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('CETS Events')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(startOIDCLoginMock).toHaveBeenCalled();
+  });
+
+  it('filters events by keyword and refreshes the list', async () => {
+    render(
+      <MemoryRouter>
+        <EventsList />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Spring Family Day');
+    const searchInput = screen.getByLabelText('Search events, venue, or site');
+    fireEvent.change(searchInput, { target: { value: 'Family' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Spring Family Day')).toBeInTheDocument();
+    });
+
+    getEventsMock.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh/i }));
+    await waitFor(() => {
+      expect(getEventsMock).toHaveBeenCalled();
+    });
   });
 });
