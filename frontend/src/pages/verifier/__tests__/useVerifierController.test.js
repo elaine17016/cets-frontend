@@ -215,4 +215,42 @@ describe('useVerifierController', () => {
     expect(stopMock).toHaveBeenCalled();
     expect(result.current.state.scanning).toBe(false);
   });
+
+  it('verifies QR codes detected by the camera scanner', async () => {
+    verifyTicketMock.mockResolvedValue({ data: { ticket_id: 't-scan' } });
+    let scanCallback;
+    decodeFromConstraintsMock.mockImplementation(async (_constraints, _video, callback) => {
+      scanCallback = callback;
+      return { stop: vi.fn() };
+    });
+
+    const { result } = renderHook(() => useVerifierController());
+    result.current.videoRef.current = document.createElement('video');
+
+    await act(async () => {
+      await result.current.handleStartScan();
+    });
+
+    await act(async () => {
+      scanCallback({ getText: () => 'camera-qr-payload' }, null);
+    });
+
+    await waitFor(() => {
+      expect(verifyTicketMock).toHaveBeenCalledWith({
+        qr_payload: 'camera-qr-payload',
+        device_id: 'scanner-A-01'
+      });
+    });
+  });
+
+  it('blocks scan start when mediaDevices is unavailable', async () => {
+    vi.stubGlobal('navigator', {});
+    const { result } = renderHook(() => useVerifierController());
+
+    await act(async () => {
+      await result.current.handleStartScan();
+    });
+
+    expect(result.current.state.error).toContain('does not support the camera API');
+  });
 });

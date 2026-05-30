@@ -64,4 +64,32 @@ describe('EventDetail page', () => {
       expect(getEventMock).toHaveBeenCalledWith('evt-1');
     });
   });
+
+  it('shows an error alert when event loading fails', async () => {
+    getEventMock.mockRejectedValue({ error: { message: 'Event unavailable' } });
+
+    render(
+      <MemoryRouter initialEntries={['/events/evt-1']}>
+        <Routes>
+          <Route path="/events/:eventId" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Event unavailable')).toBeInTheDocument();
+  });
+
+  it('shows empty state when event is missing', async () => {
+    getEventMock.mockResolvedValue({ data: null });
+
+    render(
+      <MemoryRouter initialEntries={['/events/evt-missing']}>
+        <Routes>
+          <Route path="/events/:eventId" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Event not found')).toBeInTheDocument();
+  });
 });

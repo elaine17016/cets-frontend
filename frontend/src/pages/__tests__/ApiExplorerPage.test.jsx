@@ -83,4 +83,36 @@ describe('ApiExplorerPage', () => {
     });
     expect(await screen.findByText('Advanced check results')).toBeInTheDocument();
   });
+
+  it('reports integration check failures', async () => {
+    apiMocks.getMe.mockRejectedValue({ error: { message: 'Unauthorized' } });
+
+    render(<ApiExplorerPage />);
+    fireEvent.click(screen.getByText('Run integration checks'));
+
+    expect(await screen.findByText(/Unauthorized|Checks failed/i)).toBeInTheDocument();
+  });
+
+  it('handles missing events during advanced admin checks', async () => {
+    apiMocks.adminGetSiteEmployeeCount.mockResolvedValue({ data: { total: 0 } });
+    apiMocks.getEvents.mockResolvedValue({ data: { items: [] } });
+
+    render(<ApiExplorerPage />);
+    fireEvent.click(screen.getByText('Run advanced API checks'));
+
+    expect(await screen.findByText('Advanced check results')).toBeInTheDocument();
+    expect(screen.getAllByText(/No testable events/i).length).toBeGreaterThan(0);
+  });
+
+  it('handles admin site employee count failures in advanced checks', async () => {
+    apiMocks.adminGetSiteEmployeeCount.mockRejectedValue({ error: { message: 'Forbidden' } });
+    apiMocks.getEvents.mockResolvedValue({ data: { items: [{ id: 'evt-1' }] } });
+    apiMocks.adminGetDashboard.mockResolvedValue({ data: { sessions_lottery: [] } });
+    apiMocks.adminGetRegistrations.mockResolvedValue({ data: { items: [] } });
+
+    render(<ApiExplorerPage />);
+    fireEvent.click(screen.getByText('Run advanced API checks'));
+
+    expect(await screen.findByText(/Forbidden/i)).toBeInTheDocument();
+  });
 });
